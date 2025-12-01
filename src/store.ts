@@ -22,11 +22,18 @@ export const useStore = create<AppState>((set) => ({
   setDevices: (devices) => set({ devices }),
 
   updateDevice: (updatedDevice) =>
-    set((state) => ({
-      devices: state.devices.map((device) =>
-        device.id === updatedDevice.id ? updatedDevice : device
-      ),
-    })),
+    set((state) => {
+      const existingIndex = state.devices.findIndex((d) => d.id === updatedDevice.id);
+      if (existingIndex >= 0) {
+        // Update existing device
+        const devices = [...state.devices];
+        devices[existingIndex] = updatedDevice;
+        return { devices };
+      } else {
+        // Add new device
+        return { devices: [...state.devices, updatedDevice] };
+      }
+    }),
 
   setRules: (rules) => set({ rules }),
 
