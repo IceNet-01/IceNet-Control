@@ -3,7 +3,6 @@ import { createServer } from 'http';
 import { ConfigManager } from './config.js';
 import { WebSocketManager } from './websocket.js';
 import { GreeManager } from './devices/GreeManager.js';
-import { EcobeeManager } from './devices/EcobeeManager.js';
 import { KasaManager } from './devices/KasaManager.js';
 import { GoodEarthManager } from './devices/GoodEarthManager.js';
 import { AutomationEngine } from './automation/AutomationEngine.js';
@@ -19,7 +18,6 @@ class IceNetControlServer {
 
   // Device managers
   private greeManager?: GreeManager;
-  private ecobeeManager?: EcobeeManager;
   private kasaManager?: KasaManager;
   private goodEarthManager?: GoodEarthManager;
 
@@ -201,22 +199,6 @@ class IceNetControlServer {
       });
     }
 
-    // Ecobee
-    if (config.devices.ecobee.enabled) {
-      this.ecobeeManager = new EcobeeManager(
-        config.devices.ecobee.apiKey,
-        config.devices.ecobee.refreshToken
-      );
-      this.ecobeeManager.on('device_update', (device) => {
-        this.wsManager.broadcast({
-          type: 'device_update',
-          payload: device,
-          timestamp: new Date(),
-        });
-      });
-      this.ecobeeManager.initialize();
-    }
-
     // Kasa
     if (config.devices.kasa.enabled) {
       this.kasaManager = new KasaManager();
@@ -374,7 +356,6 @@ class IceNetControlServer {
 ║                                                               ║
 ║  Enabled Devices:                                             ║
 ║    - Gree HVAC: ${config.devices.gree.enabled ? '✓' : '✗'}                                       ║
-║    - Ecobee: ${config.devices.ecobee.enabled ? '✓' : '✗'}                                          ║
 ║    - Kasa: ${config.devices.kasa.enabled ? '✓' : '✗'}                                            ║
 ║    - Good Earth Lighting: ${config.devices.goodearth.enabled ? '✓' : '✗'}                        ║
 ║                                                               ║
