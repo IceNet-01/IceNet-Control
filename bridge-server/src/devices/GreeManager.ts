@@ -1,6 +1,8 @@
 import { BaseDeviceManager } from './BaseDeviceManager.js';
 import { GreeDevice } from '../types.js';
 import greeHvac from 'gree-hvac-client';
+import dgram from 'dgram';
+import crypto from 'crypto';
 
 export class GreeManager extends BaseDeviceManager {
   private clients: Map<string, any> = new Map();
@@ -14,74 +16,129 @@ export class GreeManager extends BaseDeviceManager {
 
     return new Promise((resolve) => {
       const discoveredDevices: GreeDevice[] = [];
+      const socket = dgram.createSocket('udp4');
 
-      // Use gree-hvac-client discovery
-      const client = new greeHvac.Client({ debug: false });
+      // Listen for device responses
+      socket.on('message', (message, rinfo) => {
+        try {
+          const data = JSON.parse(message.toString());
 
-      client.on('device', (hvacDevice: any) => {
-        const deviceId = `gree_${hvacDevice.address.replace(/\./g, '_')}`;
+          // Check if this is a device scan response
+          if (data.t === 'pack' && data.pack) {
+            // Decrypt the device info
+            const decrypted = this.decrypt(data.pack);
+            const deviceInfo = JSON.parse(decrypted);
 
-        if (!this.devices.has(deviceId)) {
-          const device: GreeDevice = {
-            id: deviceId,
-            name: hvacDevice.name || `Gree HVAC ${hvacDevice.address}`,
-            type: 'gree',
-            ip: hvacDevice.address,
-            mac: hvacDevice.mac,
-            status: 'online',
-            enabled: true,
-            power: false,
-            mode: 'auto',
-            temperature: 72,
-            fanSpeed: 'auto',
-            swingMode: 'default',
-            turbo: false,
-            quiet: false,
-            light: true,
-            lastSeen: new Date(),
-          };
+            if (deviceInfo.t === 'dev') {
+              const deviceId = `gree_${rinfo.address.replace(/\./g, '_')}`;
 
-          this.updateDevice(device);
-          this.clients.set(deviceId, hvacDevice);
-          discoveredDevices.push(device);
+              if (!this.devices.has(deviceId)) {
+                const device: GreeDevice = {
+                  id: deviceId,
+                  name: deviceInfo.name || `Gree HVAC ${rinfo.address}`,
+                  type: 'gree',
+                  ip: rinfo.address,
+                  mac: deviceInfo.cid,
+                  status: 'online',
+                  enabled: true,
+                  power: false,
+                  mode: 'auto',
+                  temperature: 72,
+                  fanSpeed: 'auto',
+                  swingMode: 'default',
+                  turbo: false,
+                  quiet: false,
+                  light: true,
+                  lastSeen: new Date(),
+                };
 
-          console.log(`[Gree] Discovered device: ${device.name} at ${device.ip}`);
+                this.updateDevice(device);
+                discoveredDevices.push(device);
 
-          // Subscribe to device updates
-          this.subscribeToDevice(deviceId, hvacDevice);
+                console.log(`[Gree] Discovered device: ${device.name} at ${device.ip}`);
+
+                // Create a client for this device
+                this.connectToDevice(deviceId, rinfo.address);
+              }
+            }
+          }
+        } catch (error) {
+          // Ignore parsing errors from non-Gree devices
         }
       });
 
-      // Scan for devices - this is the correct method
-      client.scan();
+      socket.on('listening', () => {
+        socket.setBroadcast(true);
+
+        // Send scan broadcast
+        const scanMessage = JSON.stringify({ t: 'scan' });
+        socket.send(scanMessage, 7000, '255.255.255.255', (error) => {
+          if (error) {
+            console.error('[Gree] Error sending scan broadcast:', error);
+          }
+        });
+      });
+
+      socket.bind();
 
       // Wait 5 seconds for discovery
       setTimeout(() => {
+        socket.close();
         resolve(discoveredDevices);
       }, 5000);
     });
   }
 
-  private subscribeToDevice(deviceId: string, hvacDevice: any): void {
-    hvacDevice.on('update', (state: any) => {
-      const device = this.devices.get(deviceId) as GreeDevice;
-      if (device) {
-        device.power = state.power === 1;
-        device.mode = this.mapMode(state.mode);
-        device.temperature = state.temperature || device.temperature;
-        device.currentTemperature = state.currentTemperature;
-        device.fanSpeed = this.mapFanSpeed(state.fanSpeed);
-        device.swingMode = this.mapSwingMode(state.swingVert);
-        device.turbo = state.turbo === 1;
-        device.quiet = state.quiet === 1;
-        device.light = state.light === 1;
-        device.status = 'online';
-        device.lastSeen = new Date();
+  private connectToDevice(deviceId: string, host: string): void {
+    try {
+      const client = new greeHvac.Client({ host, debug: false });
 
-        this.updateDevice(device);
-      }
-    });
+      client.on('connect', () => {
+        console.log(`[Gree] Connected to ${deviceId}`);
+      });
+
+      client.on('update', (updatedProperties: any, properties: any) => {
+        const device = this.devices.get(deviceId) as GreeDevice;
+        if (device) {
+          // Update device state from properties
+          if ('power' in properties) device.power = properties.power === 'on';
+          if ('mode' in properties) device.mode = this.mapMode(properties.mode);
+          if ('temperature' in properties) device.temperature = properties.temperature;
+          if ('currentTemperature' in properties) device.currentTemperature = properties.currentTemperature;
+          if ('fanSpeed' in properties) device.fanSpeed = this.mapFanSpeed(properties.fanSpeed);
+          if ('swingVert' in properties) device.swingMode = this.mapSwingMode(properties.swingVert);
+          if ('turbo' in properties) device.turbo = properties.turbo === 'on';
+          if ('quiet' in properties) device.quiet = properties.quiet !== 'off';
+          if ('lights' in properties) device.light = properties.lights === 'on';
+          device.status = 'online';
+          device.lastSeen = new Date();
+
+          this.updateDevice(device);
+        }
+      });
+
+      client.on('no_response', () => {
+        const device = this.devices.get(deviceId) as GreeDevice;
+        if (device) {
+          device.status = 'offline';
+          this.updateDevice(device);
+        }
+      });
+
+      this.clients.set(deviceId, client);
+    } catch (error) {
+      console.error(`[Gree] Error connecting to ${deviceId}:`, error);
+    }
   }
+
+  private decrypt(pack: string): string {
+    const key = 'a3K8Bx%2r8Y7#xDh';
+    const decipher = crypto.createDecipheriv('aes-128-ecb', key, '');
+    let decrypted = decipher.update(pack, 'base64', 'utf8');
+    decrypted += decipher.final('utf8');
+    return decrypted;
+  }
+
 
   async controlDevice(deviceId: string, command: string, parameters?: any): Promise<void> {
     const device = this.devices.get(deviceId) as GreeDevice;
@@ -97,13 +154,13 @@ export class GreeManager extends BaseDeviceManager {
 
     switch (command) {
       case 'power':
-        updates.power = parameters.value ? 1 : 0;
+        updates.power = parameters.value ? 'on' : 'off';
         break;
       case 'temperature':
         updates.temperature = parameters.value;
         break;
       case 'mode':
-        updates.mode = this.mapModeToGree(parameters.value);
+        updates.mode = parameters.value;
         break;
       case 'fanSpeed':
         updates.fanSpeed = this.mapFanSpeedToGree(parameters.value);
@@ -112,13 +169,13 @@ export class GreeManager extends BaseDeviceManager {
         updates.swingVert = this.mapSwingModeToGree(parameters.value);
         break;
       case 'turbo':
-        updates.turbo = parameters.value ? 1 : 0;
+        updates.turbo = parameters.value ? 'on' : 'off';
         break;
       case 'quiet':
-        updates.quiet = parameters.value ? 1 : 0;
+        updates.quiet = parameters.value ? 'mode1' : 'off';
         break;
       case 'light':
-        updates.light = parameters.value ? 1 : 0;
+        updates.lights = parameters.value ? 'on' : 'off';
         break;
       default:
         throw new Error(`Unknown command: ${command}`);
@@ -134,33 +191,79 @@ export class GreeManager extends BaseDeviceManager {
   }
 
   // Mapping helpers
-  private mapMode(mode: number): GreeDevice['mode'] {
+  private mapMode(mode: string | number): GreeDevice['mode'] {
+    if (typeof mode === 'string') {
+      // gree-hvac-client uses 'fan_only' instead of 'fan'
+      if (mode === 'fan_only') return 'fan';
+      return mode as GreeDevice['mode'];
+    }
+    // Legacy numeric mode mapping
     const modes: GreeDevice['mode'][] = ['auto', 'cool', 'dry', 'fan', 'heat'];
     return modes[mode] || 'auto';
   }
 
-  private mapModeToGree(mode: string): number {
-    const modes = { auto: 0, cool: 1, dry: 2, fan: 3, heat: 4 };
-    return modes[mode as keyof typeof modes] ?? 0;
-  }
-
-  private mapFanSpeed(speed: number): GreeDevice['fanSpeed'] {
+  private mapFanSpeed(speed: string | number): GreeDevice['fanSpeed'] {
+    if (typeof speed === 'string') {
+      // Map gree-hvac-client fan speeds to our simplified speeds
+      const speedMap: Record<string, GreeDevice['fanSpeed']> = {
+        'auto': 'auto',
+        'low': 'low',
+        'mediumLow': 'medium',
+        'medium': 'medium',
+        'mediumHigh': 'high',
+        'high': 'high',
+      };
+      return speedMap[speed] || 'auto';
+    }
+    // Legacy numeric speed mapping
     const speeds: GreeDevice['fanSpeed'][] = ['auto', 'low', 'medium', 'high'];
     return speeds[speed] || 'auto';
   }
 
-  private mapFanSpeedToGree(speed: string): number {
-    const speeds = { auto: 0, low: 1, medium: 2, high: 3 };
-    return speeds[speed as keyof typeof speeds] ?? 0;
+  private mapFanSpeedToGree(speed: string): string {
+    // Map our simplified speeds to gree-hvac-client speeds
+    const speedMap: Record<string, string> = {
+      'auto': 'auto',
+      'low': 'low',
+      'medium': 'medium',
+      'high': 'high',
+    };
+    return speedMap[speed] || 'auto';
   }
 
-  private mapSwingMode(swing: number): GreeDevice['swingMode'] {
+  private mapSwingMode(swing: string | number): GreeDevice['swingMode'] {
+    if (typeof swing === 'string') {
+      // Map gree-hvac-client swing modes to our simplified modes
+      const swingMap: Record<string, GreeDevice['swingMode']> = {
+        'default': 'default',
+        'full': 'full',
+        'fixedTop': 'up',
+        'fixedMidTop': 'up',
+        'fixedMid': 'middle',
+        'fixedMidBottom': 'down',
+        'fixedBottom': 'down',
+        'swingTop': 'up',
+        'swingMidTop': 'up',
+        'swingMid': 'middle',
+        'swingMidBottom': 'down',
+        'swingBottom': 'down',
+      };
+      return swingMap[swing] || 'default';
+    }
+    // Legacy numeric swing mapping
     const modes: GreeDevice['swingMode'][] = ['default', 'full', 'up', 'middle', 'down'];
     return modes[swing] || 'default';
   }
 
-  private mapSwingModeToGree(swing: string): number {
-    const modes = { default: 0, full: 1, up: 2, middle: 3, down: 4 };
-    return modes[swing as keyof typeof modes] ?? 0;
+  private mapSwingModeToGree(swing: string): string {
+    // Map our simplified modes to gree-hvac-client swing modes
+    const swingMap: Record<string, string> = {
+      'default': 'default',
+      'full': 'full',
+      'up': 'fixedTop',
+      'middle': 'fixedMid',
+      'down': 'fixedBottom',
+    };
+    return swingMap[swing] || 'default';
   }
 }
