@@ -5,9 +5,11 @@ import { WebSocketManager } from './websocket.js';
 import { GreeManager } from './devices/GreeManager.js';
 import { EcobeeManager } from './devices/EcobeeManager.js';
 import { KasaManager } from './devices/KasaManager.js';
+import { GoodEarthManager } from './devices/GoodEarthManager.js';
 import { AutomationEngine } from './automation/AutomationEngine.js';
 import { WeatherService } from './services/WeatherService.js';
-import { Device, AutomationRule } from './types.js';
+import { ScenarioManager } from './scenarios/ScenarioManager.js';
+import { Device, AutomationRule, Scenario, SystemCoordination } from './types.js';
 
 class IceNetControlServer {
   private app = express();
@@ -19,13 +21,16 @@ class IceNetControlServer {
   private greeManager?: GreeManager;
   private ecobeeManager?: EcobeeManager;
   private kasaManager?: KasaManager;
+  private goodEarthManager?: GoodEarthManager;
 
   // Services
   private weatherService?: WeatherService;
   private automationEngine?: AutomationEngine;
+  private scenarioManager?: ScenarioManager;
 
   constructor() {
     this.setupExpress();
+    this.setupScenarios();
     this.setupDeviceManagers();
     this.setupAutomation();
     this.setupWeather();
@@ -92,6 +97,90 @@ class IceNetControlServer {
       this.configManager.updateConfig(req.body);
       res.json({ success: true });
     });
+
+    // Scenario endpoints
+    this.app.get('/api/scenarios', (req, res) => {
+      const scenarios = this.scenarioManager?.getScenarios() || [];
+      res.json(scenarios);
+    });
+
+    this.app.post('/api/scenarios', (req, res) => {
+      const scenario: Scenario = req.body;
+      this.scenarioManager?.addScenario(scenario);
+      res.json({ success: true });
+    });
+
+    this.app.put('/api/scenarios/:scenarioId', (req, res) => {
+      const { scenarioId } = req.params;
+      this.scenarioManager?.updateScenario(scenarioId, req.body);
+      res.json({ success: true });
+    });
+
+    this.app.delete('/api/scenarios/:scenarioId', (req, res) => {
+      const { scenarioId } = req.params;
+      this.scenarioManager?.deleteScenario(scenarioId);
+      res.json({ success: true });
+    });
+
+    this.app.post('/api/scenarios/:scenarioId/execute', async (req, res) => {
+      try {
+        const { scenarioId } = req.params;
+        await this.scenarioManager?.executeScenario(scenarioId);
+        res.json({ success: true });
+      } catch (error: any) {
+        res.status(500).json({ error: error.message });
+      }
+    });
+
+    // System coordination endpoints
+    this.app.get('/api/coordinations', (req, res) => {
+      const coordinations = this.scenarioManager?.getCoordinations() || [];
+      res.json(coordinations);
+    });
+
+    this.app.post('/api/coordinations', (req, res) => {
+      const coordination: SystemCoordination = req.body;
+      this.scenarioManager?.addCoordination(coordination);
+      res.json({ success: true });
+    });
+
+    this.app.put('/api/coordinations/:coordinationId', (req, res) => {
+      const { coordinationId } = req.params;
+      this.scenarioManager?.updateCoordination(coordinationId, req.body);
+      res.json({ success: true });
+    });
+
+    this.app.delete('/api/coordinations/:coordinationId', (req, res) => {
+      const { coordinationId } = req.params;
+      this.scenarioManager?.deleteCoordination(coordinationId);
+      res.json({ success: true });
+    });
+  }
+
+  private setupScenarios(): void {
+    this.scenarioManager = new ScenarioManager();
+
+    // Handle scenario device commands
+    this.scenarioManager.on('device_command', async (command) => {
+      try {
+        await this.controlDevice(
+          command.deviceId,
+          command.command,
+          command.parameters
+        );
+      } catch (error) {
+        console.error('[Scenarios] Error executing device command:', error);
+      }
+    });
+
+    // Broadcast scenario execution events
+    this.scenarioManager.on('scenario_executed', (scenario) => {
+      this.wsManager.broadcast({
+        type: 'scenario_executed',
+        payload: scenario,
+        timestamp: new Date(),
+      });
+    });
   }
 
   private setupDeviceManagers(): void {
@@ -142,6 +231,21 @@ class IceNetControlServer {
         this.kasaManager?.startDiscovery(config.devices.kasa.scanInterval);
       });
     }
+
+    // Good Earth Lighting
+    if (config.devices.goodearth.enabled) {
+      this.goodEarthManager = new GoodEarthManager(config.devices.goodearth.bridgeIp);
+      this.goodEarthManager.on('device_update', (device) => {
+        this.wsManager.broadcast({
+          type: 'device_update',
+          payload: device,
+          timestamp: new Date(),
+        });
+      });
+      this.goodEarthManager.initialize().then(() => {
+        this.goodEarthManager?.startDiscovery(config.devices.goodearth.scanInterval);
+      });
+    }
   }
 
   private setupWeather(): void {
@@ -188,7 +292,25 @@ class IceNetControlServer {
         });
       });
 
+      // Handle scenario triggers from automation
+      this.automationEngine.on('scenario_trigger', async (data) => {
+        try {
+          await this.scenarioManager?.executeScenario(data.scenarioId);
+        } catch (error) {
+          console.error('[Automation] Error triggering scenario:', error);
+        }
+      });
+
       this.automationEngine.startMonitoring(config.automation.checkInterval);
+
+      // Periodically evaluate system coordinations
+      setInterval(() => {
+        if (this.automationEngine && this.scenarioManager) {
+          this.scenarioManager.evaluateCoordinations((condition) =>
+            this.automationEngine!.evaluateConditionExternal(condition)
+          );
+        }
+      }, config.automation.checkInterval * 1000);
     }
   }
 
@@ -203,6 +325,9 @@ class IceNetControlServer {
     }
     if (this.kasaManager) {
       devices.push(...this.kasaManager.getDevices());
+    }
+    if (this.goodEarthManager) {
+      devices.push(...this.goodEarthManager.getDevices());
     }
 
     return devices;
@@ -229,6 +354,9 @@ class IceNetControlServer {
       case 'kasa':
         await this.kasaManager?.controlDevice(deviceId, command, parameters);
         break;
+      case 'goodearth':
+        await this.goodEarthManager?.controlDevice(deviceId, command, parameters);
+        break;
     }
   }
 
@@ -248,6 +376,7 @@ class IceNetControlServer {
 ║    - Gree HVAC: ${config.devices.gree.enabled ? '✓' : '✗'}                                       ║
 ║    - Ecobee: ${config.devices.ecobee.enabled ? '✓' : '✗'}                                          ║
 ║    - Kasa: ${config.devices.kasa.enabled ? '✓' : '✗'}                                            ║
+║    - Good Earth Lighting: ${config.devices.goodearth.enabled ? '✓' : '✗'}                        ║
 ║                                                               ║
 ║  Services:                                                    ║
 ║    - Weather: ${config.weather.enabled ? '✓' : '✗'}                                          ║
@@ -267,6 +396,7 @@ class IceNetControlServer {
     await this.greeManager?.cleanup();
     await this.ecobeeManager?.cleanup();
     await this.kasaManager?.cleanup();
+    await this.goodEarthManager?.cleanup();
 
     this.server.close();
     console.log('Server stopped');

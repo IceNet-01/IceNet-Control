@@ -1,0 +1,108 @@
+[
+  {
+    "id": "temp-based-hvac-coordination",
+    "name": "Temperature-Based HVAC Coordination",
+    "description": "Above 75°F use primary AC, below 65°F use heat pump, shut off the other system",
+    "enabled": true,
+    "thresholds": [
+      {
+        "condition": {
+          "source": "weather",
+          "field": "temperature",
+          "operator": "gt",
+          "value": 75
+        },
+        "primaryDeviceId": "gree_192_168_1_100",
+        "secondaryDeviceIds": ["gree_192_168_1_101"],
+        "actions": [
+          {
+            "type": "device_control",
+            "deviceId": "gree_192_168_1_100",
+            "command": "power",
+            "parameters": { "value": true }
+          },
+          {
+            "type": "device_control",
+            "deviceId": "gree_192_168_1_100",
+            "command": "mode",
+            "parameters": { "value": "cool" }
+          },
+          {
+            "type": "device_control",
+            "deviceId": "gree_192_168_1_100",
+            "command": "temperature",
+            "parameters": { "value": 72 }
+          }
+        ]
+      },
+      {
+        "condition": {
+          "source": "weather",
+          "field": "temperature",
+          "operator": "lt",
+          "value": 65
+        },
+        "primaryDeviceId": "gree_192_168_1_101",
+        "secondaryDeviceIds": ["gree_192_168_1_100"],
+        "actions": [
+          {
+            "type": "device_control",
+            "deviceId": "gree_192_168_1_101",
+            "command": "power",
+            "parameters": { "value": true }
+          },
+          {
+            "type": "device_control",
+            "deviceId": "gree_192_168_1_101",
+            "command": "mode",
+            "parameters": { "value": "heat" }
+          },
+          {
+            "type": "device_control",
+            "deviceId": "gree_192_168_1_101",
+            "command": "temperature",
+            "parameters": { "value": 70 }
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "id": "freeze-protection-coordination",
+    "name": "Freeze Protection with Backup System",
+    "description": "When temp drops below 32°F, turn off primary AC and activate backup heat",
+    "enabled": true,
+    "thresholds": [
+      {
+        "condition": {
+          "source": "weather",
+          "field": "temperature",
+          "operator": "lt",
+          "value": 32
+        },
+        "primaryDeviceId": "ecobee_main_floor",
+        "secondaryDeviceIds": ["gree_192_168_1_100", "gree_192_168_1_101"],
+        "actions": [
+          {
+            "type": "device_control",
+            "deviceId": "ecobee_main_floor",
+            "command": "power",
+            "parameters": { "value": true }
+          },
+          {
+            "type": "device_control",
+            "deviceId": "ecobee_main_floor",
+            "command": "mode",
+            "parameters": { "value": "heat" }
+          },
+          {
+            "type": "device_control",
+            "deviceId": "ecobee_main_floor",
+            "command": "temperature",
+            "parameters": { "value": 68 }
+          }
+        ]
+      }
+    ]
+  }
+]

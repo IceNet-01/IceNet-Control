@@ -1,0 +1,99 @@
+[
+  {
+    "id": "all-lights-off",
+    "name": "All Lights Off",
+    "description": "Turn off all Kasa and Good Earth lights",
+    "enabled": true,
+    "deviceActions": [
+      {
+        "deviceId": "kasa_bulb_bedroom",
+        "commands": [
+          {
+            "command": "power",
+            "parameters": { "value": false }
+          }
+        ]
+      },
+      {
+        "deviceId": "goodearth_living_room",
+        "commands": [
+          {
+            "command": "power",
+            "parameters": { "value": false },
+            "delay": 500
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "id": "movie-mode",
+    "name": "Movie Mode",
+    "description": "Dim lights to 20% and set warm color temperature",
+    "enabled": true,
+    "transitionTime": 3,
+    "deviceActions": [
+      {
+        "deviceId": "goodearth_living_room",
+        "commands": [
+          {
+            "command": "brightness",
+            "parameters": { "value": 20 }
+          },
+          {
+            "command": "colorTemp",
+            "parameters": { "value": 2700 },
+            "delay": 1000
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "id": "morning-routine",
+    "name": "Morning Routine",
+    "description": "Turn on heat, set lights to daylight",
+    "enabled": true,
+    "deviceActions": [
+      {
+        "deviceId": "gree_192_168_1_100",
+        "commands": [
+          {
+            "command": "power",
+            "parameters": { "value": true }
+          },
+          {
+            "command": "mode",
+            "parameters": { "value": "heat" },
+            "delay": 500
+          },
+          {
+            "command": "temperature",
+            "parameters": { "value": 72 },
+            "delay": 1000
+          }
+        ]
+      },
+      {
+        "deviceId": "goodearth_bedroom",
+        "commands": [
+          {
+            "command": "power",
+            "parameters": { "value": true },
+            "delay": 2000
+          },
+          {
+            "command": "brightness",
+            "parameters": { "value": 80 },
+            "delay": 2500
+          },
+          {
+            "command": "colorTemp",
+            "parameters": { "value": 5500 },
+            "delay": 3000
+          }
+        ]
+      }
+    ]
+  }
+]

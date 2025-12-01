@@ -104,6 +104,11 @@ export class AutomationEngine extends EventEmitter {
     this.rules.forEach(rule => {
       if (!rule.enabled) return;
 
+      // Check schedule if defined
+      if (rule.schedule && !this.isWithinSchedule(rule.schedule, now)) {
+        return; // Outside of scheduled time
+      }
+
       // Check cooldown
       if (rule.cooldown && rule.lastExecuted) {
         const timeSinceExecution = (now.getTime() - rule.lastExecuted.getTime()) / 1000;
@@ -123,6 +128,54 @@ export class AutomationEngine extends EventEmitter {
         this.emit('rule_triggered', rule);
       }
     });
+  }
+
+  private isWithinSchedule(schedule: any, now: Date): boolean {
+    const currentHour = now.getHours();
+    const currentMinute = now.getMinutes();
+    const currentDay = now.getDay();
+    const currentDateStr = now.toISOString().split('T')[0];
+
+    switch (schedule.type) {
+      case 'once':
+        // Check if today matches the scheduled date
+        if (schedule.date !== currentDateStr) return false;
+        break;
+
+      case 'weekly':
+        // Check if current day is in the allowed days
+        if (schedule.daysOfWeek && !schedule.daysOfWeek.includes(currentDay)) {
+          return false;
+        }
+        break;
+
+      case 'daily':
+        // Always run on daily schedule (time check below)
+        break;
+
+      case 'custom':
+        // Custom logic can be added here
+        break;
+    }
+
+    // Check time range if specified
+    if (schedule.startTime) {
+      const [startHour, startMinute] = schedule.startTime.split(':').map(Number);
+      const currentMinutes = currentHour * 60 + currentMinute;
+      const startMinutes = startHour * 60 + startMinute;
+
+      if (currentMinutes < startMinutes) return false;
+    }
+
+    if (schedule.endTime) {
+      const [endHour, endMinute] = schedule.endTime.split(':').map(Number);
+      const currentMinutes = currentHour * 60 + currentMinute;
+      const endMinutes = endHour * 60 + endMinute;
+
+      if (currentMinutes > endMinutes) return false;
+    }
+
+    return true;
   }
 
   private evaluateConditions(conditions: Condition[]): boolean {
@@ -204,6 +257,12 @@ export class AutomationEngine extends EventEmitter {
         });
         break;
 
+      case 'scenario':
+        this.emit('scenario_trigger', {
+          scenarioId: action.scenarioId,
+        });
+        break;
+
       case 'notification':
         this.emit('notification', {
           message: action.command,
@@ -215,5 +274,10 @@ export class AutomationEngine extends EventEmitter {
         this.emit('custom_action', action);
         break;
     }
+  }
+
+  // Expose condition evaluator for external use (e.g., ScenarioManager)
+  public evaluateConditionExternal(condition: any): boolean {
+    return this.evaluateCondition(condition);
   }
 }

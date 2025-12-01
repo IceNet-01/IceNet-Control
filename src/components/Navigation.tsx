@@ -11,6 +11,8 @@ const Navigation = () => {
     { path: '/', label: 'Dashboard' },
     { path: '/devices', label: 'Devices' },
     { path: '/automation', label: 'Automation' },
+    { path: '/scenarios', label: 'Scenarios' },
+    { path: '/coordinations', label: 'Synergy' },
     { path: '/settings', label: 'Settings' },
   ];
 

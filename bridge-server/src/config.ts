@@ -25,6 +25,10 @@ const DEFAULT_CONFIG: BridgeConfig = {
       enabled: true,
       scanInterval: 60,
     },
+    goodearth: {
+      enabled: false,
+      scanInterval: 60,
+    },
   },
   automation: {
     enabled: true,

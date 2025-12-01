@@ -1,5 +1,5 @@
 // Mirror types from backend
-export type DeviceType = 'gree' | 'ecobee' | 'kasa';
+export type DeviceType = 'gree' | 'ecobee' | 'kasa' | 'goodearth';
 export type DeviceStatus = 'online' | 'offline' | 'error' | 'connecting';
 
 export interface BaseDevice {
@@ -49,7 +49,18 @@ export interface KasaDevice extends BaseDevice {
   consumption?: number;
 }
 
-export type Device = GreeDevice | EcobeeDevice | KasaDevice;
+export interface GoodEarthDevice extends BaseDevice {
+  type: 'goodearth';
+  ip: string;
+  deviceId: string;
+  power: boolean;
+  brightness?: number;
+  colorTemp?: number;
+  rgbColor?: { r: number; g: number; b: number };
+  effect?: string;
+}
+
+export type Device = GreeDevice | EcobeeDevice | KasaDevice | GoodEarthDevice;
 
 export type ConditionOperator = 'eq' | 'ne' | 'gt' | 'gte' | 'lt' | 'lte';
 
@@ -62,10 +73,19 @@ export interface Condition {
 }
 
 export interface Action {
-  type: 'device_control' | 'notification' | 'custom';
+  type: 'device_control' | 'notification' | 'scenario' | 'custom';
   deviceId?: string;
+  scenarioId?: string;
   command: string;
   parameters?: Record<string, any>;
+}
+
+export interface Schedule {
+  type: 'once' | 'daily' | 'weekly' | 'custom';
+  startTime?: string;
+  endTime?: string;
+  daysOfWeek?: number[];
+  date?: string;
 }
 
 export interface AutomationRule {
@@ -75,8 +95,40 @@ export interface AutomationRule {
   enabled: boolean;
   conditions: Condition[];
   actions: Action[];
+  schedule?: Schedule;
   cooldown?: number;
   lastExecuted?: Date;
+}
+
+export interface DeviceAction {
+  deviceId: string;
+  commands: Array<{
+    command: string;
+    parameters?: Record<string, any>;
+    delay?: number;
+  }>;
+}
+
+export interface Scenario {
+  id: string;
+  name: string;
+  description?: string;
+  enabled: boolean;
+  deviceActions: DeviceAction[];
+  transitionTime?: number;
+}
+
+export interface SystemCoordination {
+  id: string;
+  name: string;
+  description?: string;
+  enabled: boolean;
+  thresholds: Array<{
+    condition: Condition;
+    primaryDeviceId: string;
+    secondaryDeviceIds?: string[];
+    actions: Action[];
+  }>;
 }
 
 export interface WeatherData {

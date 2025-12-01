@@ -7,6 +7,8 @@ import Navigation from './components/Navigation';
 import Dashboard from './pages/Dashboard';
 import Devices from './pages/Devices';
 import Automation from './pages/Automation';
+import Scenarios from './pages/Scenarios';
+import Coordinations from './pages/Coordinations';
 import Settings from './pages/Settings';
 
 function App() {
@@ -45,6 +47,8 @@ function App() {
             <Route path="/" element={<Dashboard />} />
             <Route path="/devices" element={<Devices />} />
             <Route path="/automation" element={<Automation />} />
+            <Route path="/scenarios" element={<Scenarios />} />
+            <Route path="/coordinations" element={<Coordinations />} />
             <Route path="/settings" element={<Settings />} />
             <Route path="*" element={<Navigate to="/" replace />} />
           </Routes>
