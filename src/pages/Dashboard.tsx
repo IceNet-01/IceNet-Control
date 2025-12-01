@@ -1,5 +1,5 @@
 import { useStore } from '../store';
-import { GreeDevice, EcobeeDevice, KasaDevice } from '../types';
+import { GreeDevice, KasaDevice } from '../types';
 
 const Dashboard = () => {
   const { devices, weather, rules } = useStore();
@@ -9,8 +9,8 @@ const Dashboard = () => {
   const activeRules = rules.filter((r) => r.enabled).length;
 
   const greeDevices = devices.filter((d) => d.type === 'gree') as GreeDevice[];
-  const ecobeeDevices = devices.filter((d) => d.type === 'ecobee') as EcobeeDevice[];
   const kasaDevices = devices.filter((d) => d.type === 'kasa') as KasaDevice[];
+  const goodEarthDevices = devices.filter((d) => d.type === 'goodearth');
 
   return (
     <div className="space-y-6">
@@ -75,18 +75,18 @@ const Dashboard = () => {
         </div>
 
         <div className="card">
-          <h3 className="text-lg font-semibold text-white mb-2">Ecobee</h3>
-          <div className="text-3xl font-bold text-primary-400">{ecobeeDevices.length}</div>
-          <div className="text-sm text-gray-400 mt-1">
-            {ecobeeDevices.filter((d) => d.power).length} active
-          </div>
-        </div>
-
-        <div className="card">
           <h3 className="text-lg font-semibold text-white mb-2">Kasa</h3>
           <div className="text-3xl font-bold text-primary-400">{kasaDevices.length}</div>
           <div className="text-sm text-gray-400 mt-1">
             {kasaDevices.filter((d) => d.power).length} powered on
+          </div>
+        </div>
+
+        <div className="card">
+          <h3 className="text-lg font-semibold text-white mb-2">Good Earth</h3>
+          <div className="text-3xl font-bold text-primary-400">{goodEarthDevices.length}</div>
+          <div className="text-sm text-gray-400 mt-1">
+            {goodEarthDevices.filter((d) => d.power).length} powered on
           </div>
         </div>
       </div>

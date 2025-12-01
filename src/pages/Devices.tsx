@@ -1,13 +1,12 @@
 import { useState } from 'react';
 import { useStore } from '../store';
-import { Device, GreeDevice, EcobeeDevice, KasaDevice } from '../types';
+import { Device, GreeDevice, KasaDevice } from '../types';
 import GreeControl from '../components/GreeControl';
-import EcobeeControl from '../components/EcobeeControl';
 import KasaControl from '../components/KasaControl';
 
 const Devices = () => {
   const { devices } = useStore();
-  const [filter, setFilter] = useState<'all' | 'gree' | 'ecobee' | 'kasa'>('all');
+  const [filter, setFilter] = useState<'all' | 'gree' | 'kasa' | 'goodearth'>('all');
   const [selectedDevice, setSelectedDevice] = useState<Device | null>(null);
 
   const filteredDevices = filter === 'all'
@@ -22,7 +21,7 @@ const Devices = () => {
           <p className="text-gray-400">Manage and control your connected devices</p>
         </div>
         <div className="flex space-x-2">
-          {(['all', 'gree', 'ecobee', 'kasa'] as const).map((type) => (
+          {(['all', 'gree', 'kasa', 'goodearth'] as const).map((type) => (
             <button
               key={type}
               onClick={() => setFilter(type)}
@@ -68,9 +67,6 @@ const Devices = () => {
 
               {device.type === 'gree' && (
                 <GreeControl device={device as GreeDevice} />
-              )}
-              {device.type === 'ecobee' && (
-                <EcobeeControl device={device as EcobeeDevice} />
               )}
               {device.type === 'kasa' && (
                 <KasaControl device={device as KasaDevice} />

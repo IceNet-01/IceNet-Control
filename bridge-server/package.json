@@ -15,7 +15,6 @@
     "node-cron": "^3.0.3",
     "axios": "^1.7.7",
     "gree-hvac-client": "^1.2.0",
-    "ecobee-api": "^1.0.3",
     "tplink-smarthome-api": "^5.0.0"
   },
   "devDependencies": {

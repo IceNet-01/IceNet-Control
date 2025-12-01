@@ -18,9 +18,6 @@ const DEFAULT_CONFIG: BridgeConfig = {
       enabled: true,
       scanInterval: 60,
     },
-    ecobee: {
-      enabled: false,
-    },
     kasa: {
       enabled: true,
       scanInterval: 60,
