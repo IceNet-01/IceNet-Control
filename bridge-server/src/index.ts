@@ -31,10 +31,25 @@ class IceNetControlServer {
   async init() {
     await this.database.initialize();
     this.setupExpress();
+    this.setupWebSocket();
     this.setupScenarios();
     this.setupDeviceManagers();
     this.setupAutomation();
     this.setupWeather();
+  }
+
+  private setupWebSocket(): void {
+    // Send all current devices when a client connects
+    this.wsManager.setOnClientConnect((ws) => {
+      const devices = this.getAllDevices();
+      devices.forEach(device => {
+        this.wsManager.sendToClient(ws, {
+          type: 'device_update',
+          payload: device,
+          timestamp: new Date(),
+        });
+      });
+    });
   }
 
   private setupExpress(): void {

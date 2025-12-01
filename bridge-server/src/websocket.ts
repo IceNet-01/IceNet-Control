@@ -5,10 +5,15 @@ import { WSMessage } from './types.js';
 export class WebSocketManager {
   private wss: WebSocketServer;
   private clients: Set<WebSocket> = new Set();
+  private onClientConnect?: (ws: WebSocket) => void;
 
   constructor(server: Server) {
     this.wss = new WebSocketServer({ server, path: '/ws' });
     this.setupWebSocket();
+  }
+
+  public setOnClientConnect(callback: (ws: WebSocket) => void): void {
+    this.onClientConnect = callback;
   }
 
   private setupWebSocket(): void {
@@ -41,6 +46,11 @@ export class WebSocketManager {
         payload: { connected: true },
         timestamp: new Date(),
       });
+
+      // Call the onClientConnect callback if set
+      if (this.onClientConnect) {
+        this.onClientConnect(ws);
+      }
     });
 
     console.log('[WebSocket] Server initialized');
