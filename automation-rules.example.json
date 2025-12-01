@@ -1,0 +1,160 @@
+[
+  {
+    "id": "hvac-freeze-protection",
+    "name": "HVAC Freeze Protection",
+    "description": "Turn off Gree HVAC when outside temperature drops below 0°F to prevent damage",
+    "enabled": false,
+    "conditions": [
+      {
+        "source": "weather",
+        "field": "temperature",
+        "operator": "lt",
+        "value": 0
+      }
+    ],
+    "actions": [
+      {
+        "type": "device_control",
+        "deviceId": "gree_192_168_1_100",
+        "command": "power",
+        "parameters": { "value": false }
+      }
+    ],
+    "cooldown": 300
+  },
+  {
+    "id": "night-mode-lights",
+    "name": "Night Mode - Turn Off Lights",
+    "description": "Turn off all Kasa bulbs at 11 PM",
+    "enabled": false,
+    "conditions": [
+      {
+        "source": "time",
+        "field": "hour",
+        "operator": "eq",
+        "value": 23
+      }
+    ],
+    "actions": [
+      {
+        "type": "device_control",
+        "deviceId": "kasa_bulb_bedroom",
+        "command": "power",
+        "parameters": { "value": false }
+      }
+    ],
+    "cooldown": 3600
+  },
+  {
+    "id": "morning-warmup",
+    "name": "Morning Warmup",
+    "description": "Turn on heating at 6 AM when temperature is below 65°F",
+    "enabled": false,
+    "conditions": [
+      {
+        "source": "time",
+        "field": "hour",
+        "operator": "eq",
+        "value": 6
+      },
+      {
+        "source": "weather",
+        "field": "temperature",
+        "operator": "lt",
+        "value": 65
+      }
+    ],
+    "actions": [
+      {
+        "type": "device_control",
+        "deviceId": "gree_192_168_1_100",
+        "command": "power",
+        "parameters": { "value": true }
+      },
+      {
+        "type": "device_control",
+        "deviceId": "gree_192_168_1_100",
+        "command": "mode",
+        "parameters": { "value": "heat" }
+      },
+      {
+        "type": "device_control",
+        "deviceId": "gree_192_168_1_100",
+        "command": "temperature",
+        "parameters": { "value": 72 }
+      }
+    ],
+    "cooldown": 3600
+  },
+  {
+    "id": "energy-saver-standby",
+    "name": "Energy Saver - Standby Device Auto-Off",
+    "description": "Turn off Kasa plug when power consumption drops below 5W (standby mode detected)",
+    "enabled": false,
+    "conditions": [
+      {
+        "source": "device",
+        "deviceId": "kasa_plug_office",
+        "field": "consumption",
+        "operator": "lt",
+        "value": 5
+      }
+    ],
+    "actions": [
+      {
+        "type": "device_control",
+        "deviceId": "kasa_plug_office",
+        "command": "power",
+        "parameters": { "value": false }
+      }
+    ],
+    "cooldown": 1800
+  },
+  {
+    "id": "hot-day-cooling",
+    "name": "Hot Day Auto-Cooling",
+    "description": "Turn on AC when temperature exceeds 85°F during daytime",
+    "enabled": false,
+    "conditions": [
+      {
+        "source": "weather",
+        "field": "temperature",
+        "operator": "gt",
+        "value": 85
+      },
+      {
+        "source": "time",
+        "field": "hour",
+        "operator": "gte",
+        "value": 10
+      },
+      {
+        "source": "time",
+        "field": "hour",
+        "operator": "lte",
+        "value": 18
+      }
+    ],
+    "actions": [
+      {
+        "type": "device_control",
+        "deviceId": "gree_192_168_1_100",
+        "command": "power",
+        "parameters": { "value": true }
+      },
+      {
+        "type": "device_control",
+        "deviceId": "gree_192_168_1_100",
+        "command": "mode",
+        "parameters": { "value": "cool" }
+      },
+      {
+        "type": "device_control",
+        "deviceId": "gree_192_168_1_100",
+        "command": "temperature",
+        "parameters": { "value": 72 }
+      }
+    ],
+    "cooldown": 3600
+  }
+]

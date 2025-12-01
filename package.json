@@ -1,0 +1,36 @@
+{
+  "name": "icenet-control",
+  "version": "0.1.0",
+  "description": "Modular IoT device control system with automation engine",
+  "type": "module",
+  "license": "SEE LICENSE IN LICENSE",
+  "author": "IceNet-01",
+  "scripts": {
+    "dev": "concurrently \"npm run dev:bridge\" \"npm run dev:renderer\"",
+    "dev:bridge": "cd bridge-server && npm run dev",
+    "dev:renderer": "vite",
+    "build": "npm run build:bridge && npm run build:renderer",
+    "build:bridge": "cd bridge-server && npm run build",
+    "build:renderer": "vite build",
+    "preview": "vite preview",
+    "start": "node bridge-server/dist/index.js",
+    "type-check": "tsc --noEmit"
+  },
+  "dependencies": {
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1",
+    "react-router-dom": "^6.26.0",
+    "zustand": "^4.5.5"
+  },
+  "devDependencies": {
+    "@types/react": "^18.3.5",
+    "@types/react-dom": "^18.3.0",
+    "@vitejs/plugin-react": "^4.3.1",
+    "autoprefixer": "^10.4.20",
+    "concurrently": "^8.2.2",
+    "postcss": "^8.4.45",
+    "tailwindcss": "^3.4.10",
+    "typescript": "^5.5.4",
+    "vite": "^5.4.3"
+  }
+}

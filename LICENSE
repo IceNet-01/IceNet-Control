@@ -1,0 +1,110 @@
+IceNet Control - Dual License (Non-Commercial/Commercial)
+Version 1.0
+Last Updated: December 1, 2025
+
+Copyright (c) 2025 IceNet-01
+All rights reserved.
+
+═══════════════════════════════════════════════════════════════════════
+
+PREAMBLE
+
+IceNet Control ("Software") is offered under a dual licensing model:
+
+1. Non-Commercial License (Free) - For personal, educational, research, and non-profit use
+2. Commercial License (Paid) - For any revenue-generating or business use
+
+By using, copying, modifying, or distributing this Software, you agree to comply with the applicable license terms below.
+
+═══════════════════════════════════════════════════════════════════════
+
+OPTION 1: NON-COMMERCIAL LICENSE (FREE)
+
+Permission is hereby granted, free of charge, to any person or entity obtaining a copy of this Software to use, copy, modify, and distribute the Software for NON-COMMERCIAL purposes only, subject to the following conditions:
+
+PERMITTED USES:
+  ✓ Personal use
+  ✓ Educational purposes
+  ✓ Academic research
+  ✓ Non-profit organizations
+  ✓ Evaluation and testing
+
+RESTRICTIONS:
+  ✗ You may NOT use the Software for any commercial purpose
+  ✗ You may NOT use the Software in any revenue-generating activity
+  ✗ You may NOT provide the Software as a service to others for compensation
+  ✗ You may NOT distribute modified versions for commercial purposes
+  ✗ You may NOT remove or alter any copyright notices or this license
+
+ATTRIBUTION:
+  - You must retain all copyright notices
+  - You must include this LICENSE file in all copies
+  - You must clearly state any modifications made
+
+MODIFICATIONS:
+  - Modified versions must remain under this Non-Commercial License
+  - You must clearly mark modified versions as such
+  - Modified versions may not be used commercially
+
+═══════════════════════════════════════════════════════════════════════
+
+OPTION 2: COMMERCIAL LICENSE (PAID)
+
+If you wish to use this Software for commercial purposes, including but not limited to:
+  - Integration into commercial products
+  - Use in revenue-generating services
+  - Distribution with commercial offerings
+  - Use by for-profit organizations
+  - Providing as a managed service
+
+You MUST obtain a separate Commercial License.
+
+To inquire about Commercial Licensing, please contact:
+  - IceNet-01 Project Maintainers
+  - Via: https://github.com/IceNet-01/IceNet-Control
+
+═══════════════════════════════════════════════════════════════════════
+
+THIRD-PARTY DEPENDENCIES
+
+This Software depends on third-party open-source libraries, each governed by their respective licenses:
+
+  - React (MIT License)
+  - Node.js and npm packages (Various OSI-approved licenses)
+  - gree-hvac-client (MIT License)
+  - tplink-smarthome-api (MIT License)
+  - Other dependencies as listed in package.json
+
+You must comply with all applicable third-party licenses when using this Software.
+
+═══════════════════════════════════════════════════════════════════════
+
+DISCLAIMER OF WARRANTY
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE, AND NONINFRINGEMENT.
+
+IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES, OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT, OR OTHERWISE, ARISING FROM, OUT OF, OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+
+═══════════════════════════════════════════════════════════════════════
+
+LIMITATION OF LIABILITY
+
+IN NO EVENT SHALL ICENET-01 OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+
+═══════════════════════════════════════════════════════════════════════
+
+TERMINATION
+
+Your rights under this license will terminate automatically if you fail to comply with any of its terms. Upon termination, you must destroy all copies of the Software in your possession.
+
+═══════════════════════════════════════════════════════════════════════
+
+GOVERNING LAW
+
+This license shall be governed by and construed in accordance with the laws applicable to open source software licensing.
+
+═══════════════════════════════════════════════════════════════════════
+
+ACCEPTANCE
+
+By using this Software, you acknowledge that you have read this license, understand it, and agree to be bound by its terms and conditions.
