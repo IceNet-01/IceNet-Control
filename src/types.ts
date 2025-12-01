@@ -1,5 +1,5 @@
 // Mirror types from backend
-export type DeviceType = 'gree' | 'ecobee' | 'kasa' | 'goodearth';
+export type DeviceType = 'gree' | 'kasa' | 'goodearth';
 export type DeviceStatus = 'online' | 'offline' | 'error' | 'connecting';
 
 export interface BaseDevice {
@@ -60,7 +60,7 @@ export interface GoodEarthDevice extends BaseDevice {
   effect?: string;
 }
 
-export type Device = GreeDevice | EcobeeDevice | KasaDevice | GoodEarthDevice;
+export type Device = GreeDevice | KasaDevice | GoodEarthDevice;
 
 export type ConditionOperator = 'eq' | 'ne' | 'gt' | 'gte' | 'lt' | 'lte';
 
