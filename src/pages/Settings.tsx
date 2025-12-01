@@ -207,64 +207,6 @@ const Settings = () => {
         </div>
       </div>
 
-      {/* Ecobee Settings */}
-      <div className="card">
-        <h2 className="text-xl font-semibold text-white mb-4">Ecobee</h2>
-        <div className="space-y-4">
-          <div className="flex items-center space-x-3">
-            <input
-              type="checkbox"
-              checked={config.devices.ecobee.enabled}
-              onChange={(e) =>
-                setConfig({
-                  ...config,
-                  devices: {
-                    ...config.devices,
-                    ecobee: { ...config.devices.ecobee, enabled: e.target.checked },
-                  },
-                })
-              }
-              className="w-4 h-4"
-            />
-            <label className="text-white">Enable Ecobee Integration</label>
-          </div>
-          {config.devices.ecobee.enabled && (
-            <>
-              <div>
-                <label className="label">API Key</label>
-                <input
-                  type="password"
-                  value={config.devices.ecobee.apiKey || ''}
-                  onChange={(e) =>
-                    setConfig({
-                      ...config,
-                      devices: {
-                        ...config.devices,
-                        ecobee: { ...config.devices.ecobee, apiKey: e.target.value },
-                      },
-                    })
-                  }
-                  className="input w-full"
-                  placeholder="Enter Ecobee API key"
-                />
-              </div>
-              <div className="text-sm text-gray-400">
-                Visit{' '}
-                <a
-                  href="https://www.ecobee.com/developers/"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="text-primary-400 hover:underline"
-                >
-                  https://www.ecobee.com/developers/
-                </a>{' '}
-                to get your API key
-              </div>
-            </>
-          )}
-        </div>
-      </div>
-
       {/* Kasa Settings */}
       <div className="card">
         <h2 className="text-xl font-semibold text-white mb-4">Kasa (TP-Link)</h2>

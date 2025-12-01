@@ -2,7 +2,7 @@
  * Core type definitions for IceNet Control
  */
 
-export type DeviceType = 'gree' | 'ecobee' | 'kasa' | 'goodearth';
+export type DeviceType = 'gree' | 'kasa' | 'goodearth';
 
 export type DeviceStatus = 'online' | 'offline' | 'error' | 'connecting';
 
@@ -32,19 +32,6 @@ export interface GreeDevice extends BaseDevice {
   light: boolean;
 }
 
-// Ecobee thermostat types
-export interface EcobeeDevice extends BaseDevice {
-  type: 'ecobee';
-  identifier: string;
-  power: boolean;
-  mode: 'auto' | 'cool' | 'heat' | 'off' | 'auxHeatOnly';
-  temperature: number;
-  currentTemperature: number;
-  humidity: number;
-  fanMode: 'auto' | 'on';
-  holdStatus?: string;
-}
-
 // Kasa device types
 export interface KasaDevice extends BaseDevice {
   type: 'kasa';
@@ -69,7 +56,7 @@ export interface GoodEarthDevice extends BaseDevice {
   effect?: string;
 }
 
-export type Device = GreeDevice | EcobeeDevice | KasaDevice | GoodEarthDevice;
+export type Device = GreeDevice | KasaDevice | GoodEarthDevice;
 
 // Automation Rule types
 export type ConditionOperator = 'eq' | 'ne' | 'gt' | 'gte' | 'lt' | 'lte';
@@ -177,11 +164,6 @@ export interface BridgeConfig {
     gree: {
       enabled: boolean;
       scanInterval: number; // seconds
-    };
-    ecobee: {
-      enabled: boolean;
-      apiKey?: string;
-      refreshToken?: string;
     };
     kasa: {
       enabled: boolean;

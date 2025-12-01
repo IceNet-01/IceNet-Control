@@ -27,18 +27,6 @@ export interface GreeDevice extends BaseDevice {
   light: boolean;
 }
 
-export interface EcobeeDevice extends BaseDevice {
-  type: 'ecobee';
-  identifier: string;
-  power: boolean;
-  mode: 'auto' | 'cool' | 'heat' | 'off' | 'auxHeatOnly';
-  temperature: number;
-  currentTemperature: number;
-  humidity: number;
-  fanMode: 'auto' | 'on';
-  holdStatus?: string;
-}
-
 export interface KasaDevice extends BaseDevice {
   type: 'kasa';
   ip: string;
