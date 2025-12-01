@@ -14,12 +14,15 @@ export class GoodEarthManager extends BaseDeviceManager {
   private pollIntervals: Map<string, NodeJS.Timeout> = new Map();
 
   constructor(bridgeIp?: string) {
-    super();
+    super('goodearth');
     this.bridgeIp = bridgeIp;
   }
 
   async initialize(): Promise<void> {
     console.log('[GoodEarth] Initializing Good Earth Lighting manager...');
+
+    // Load saved devices from database
+    this.loadDevicesFromDatabase();
 
     if (this.bridgeIp) {
       console.log(`[GoodEarth] Using bridge at ${this.bridgeIp}`);

@@ -8,12 +8,15 @@ export class KasaManager extends BaseDeviceManager {
   private client: Client;
 
   constructor() {
-    super();
+    super('kasa');
     this.client = new Client();
   }
 
   async initialize(): Promise<void> {
     console.log('[Kasa] Initializing Kasa device manager...');
+
+    // Load saved devices from database
+    this.loadDevicesFromDatabase();
   }
 
   async discover(): Promise<KasaDevice[]> {

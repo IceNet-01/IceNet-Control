@@ -7,8 +7,22 @@ import crypto from 'crypto';
 export class GreeManager extends BaseDeviceManager {
   private clients: Map<string, any> = new Map();
 
+  constructor() {
+    super('gree');
+  }
+
   async initialize(): Promise<void> {
     console.log('[Gree] Initializing Gree HVAC manager...');
+
+    // Load saved devices from database
+    this.loadDevicesFromDatabase();
+
+    // Reconnect to saved devices
+    for (const device of this.devices.values()) {
+      if (device.type === 'gree' && device.ip) {
+        this.connectToDevice(device.id, device.ip);
+      }
+    }
   }
 
   async discover(): Promise<GreeDevice[]> {

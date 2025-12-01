@@ -2,6 +2,7 @@ import express from 'express';
 import { createServer } from 'http';
 import { ConfigManager } from './config.js';
 import { WebSocketManager } from './websocket.js';
+import { DeviceDatabase } from './database/DeviceDatabase.js';
 import { GreeManager } from './devices/GreeManager.js';
 import { KasaManager } from './devices/KasaManager.js';
 import { GoodEarthManager } from './devices/GoodEarthManager.js';
@@ -15,6 +16,7 @@ class IceNetControlServer {
   private server = createServer(this.app);
   private configManager = new ConfigManager();
   private wsManager = new WebSocketManager(this.server);
+  private database = new DeviceDatabase();
 
   // Device managers
   private greeManager?: GreeManager;
@@ -26,7 +28,8 @@ class IceNetControlServer {
   private automationEngine?: AutomationEngine;
   private scenarioManager?: ScenarioManager;
 
-  constructor() {
+  async init() {
+    await this.database.initialize();
     this.setupExpress();
     this.setupScenarios();
     this.setupDeviceManagers();
@@ -187,6 +190,7 @@ class IceNetControlServer {
     // Gree HVAC
     if (config.devices.gree.enabled) {
       this.greeManager = new GreeManager();
+      this.greeManager.setDatabase(this.database);
       this.greeManager.on('device_update', (device) => {
         this.wsManager.broadcast({
           type: 'device_update',
@@ -202,6 +206,7 @@ class IceNetControlServer {
     // Kasa
     if (config.devices.kasa.enabled) {
       this.kasaManager = new KasaManager();
+      this.kasaManager.setDatabase(this.database);
       this.kasaManager.on('device_update', (device) => {
         this.wsManager.broadcast({
           type: 'device_update',
@@ -217,6 +222,7 @@ class IceNetControlServer {
     // Good Earth Lighting
     if (config.devices.goodearth.enabled) {
       this.goodEarthManager = new GoodEarthManager(config.devices.goodearth.bridgeIp);
+      this.goodEarthManager.setDatabase(this.database);
       this.goodEarthManager.on('device_update', (device) => {
         this.wsManager.broadcast({
           type: 'device_update',
@@ -372,6 +378,9 @@ class IceNetControlServer {
     await this.kasaManager?.cleanup();
     await this.goodEarthManager?.cleanup();
 
+    // Flush database to disk
+    await this.database.flush();
+
     this.server.close();
     console.log('Server stopped');
   }
@@ -379,7 +388,10 @@ class IceNetControlServer {
 
 // Start server
 const server = new IceNetControlServer();
-server.start();
+(async () => {
+  await server.init();
+  await server.start();
+})();
 
 // Graceful shutdown
 process.on('SIGINT', async () => {
