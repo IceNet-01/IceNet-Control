@@ -302,9 +302,6 @@ class IceNetControlServer {
     if (this.greeManager) {
       devices.push(...this.greeManager.getDevices());
     }
-    if (this.ecobeeManager) {
-      devices.push(...this.ecobeeManager.getDevices());
-    }
     if (this.kasaManager) {
       devices.push(...this.kasaManager.getDevices());
     }
@@ -329,9 +326,6 @@ class IceNetControlServer {
     switch (device.type) {
       case 'gree':
         await this.greeManager?.controlDevice(deviceId, command, parameters);
-        break;
-      case 'ecobee':
-        await this.ecobeeManager?.controlDevice(deviceId, command, parameters);
         break;
       case 'kasa':
         await this.kasaManager?.controlDevice(deviceId, command, parameters);
