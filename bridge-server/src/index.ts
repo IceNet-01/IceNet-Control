@@ -375,7 +375,6 @@ class IceNetControlServer {
     this.weatherService?.stopUpdates();
 
     await this.greeManager?.cleanup();
-    await this.ecobeeManager?.cleanup();
     await this.kasaManager?.cleanup();
     await this.goodEarthManager?.cleanup();
 
