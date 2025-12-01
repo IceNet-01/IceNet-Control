@@ -1,6 +1,8 @@
 import { BaseDeviceManager } from './BaseDeviceManager.js';
 import { KasaDevice } from '../types.js';
-import { Client } from 'tplink-smarthome-api';
+import tplinkApi from 'tplink-smarthome-api';
+
+const { Client } = tplinkApi;
 
 export class KasaManager extends BaseDeviceManager {
   private client: Client;
