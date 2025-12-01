@@ -1,14 +1,6 @@
 import { BaseDeviceManager } from './BaseDeviceManager.js';
 import { GreeDevice } from '../types.js';
-import Gree from 'gree-hvac-client';
-
-interface GreeHVACDevice {
-  address: string;
-  mac?: string;
-  name?: string;
-  model?: string;
-  version?: string;
-}
+import greeHvac from 'gree-hvac-client';
 
 export class GreeManager extends BaseDeviceManager {
   private clients: Map<string, any> = new Map();
@@ -24,7 +16,7 @@ export class GreeManager extends BaseDeviceManager {
       const discoveredDevices: GreeDevice[] = [];
 
       // Use gree-hvac-client discovery
-      const client = new Gree.Client({ debug: false });
+      const client = new greeHvac.Client({ debug: false });
 
       client.on('device', (hvacDevice: any) => {
         const deviceId = `gree_${hvacDevice.address.replace(/\./g, '_')}`;
@@ -60,7 +52,7 @@ export class GreeManager extends BaseDeviceManager {
         }
       });
 
-      // Scan for devices
+      // Scan for devices - this is the correct method
       client.scan();
 
       // Wait 5 seconds for discovery
