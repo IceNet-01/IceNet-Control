@@ -6,7 +6,8 @@ interface Props {
 }
 
 const KasaControl = ({ device }: Props) => {
-  const control = async (command: string, value: any) => {
+  const control = async (e: React.MouseEvent | React.ChangeEvent, command: string, value: any) => {
+    e.stopPropagation(); // Prevent event from bubbling to parent card
     try {
       await api.controlDevice(device.id, command, { value });
     } catch (error) {
@@ -22,7 +23,7 @@ const KasaControl = ({ device }: Props) => {
       <div className="flex items-center justify-between">
         <span className="text-lg font-medium text-white">Power</span>
         <button
-          onClick={() => control('power', !device.power)}
+          onClick={(e) => control(e, 'power', !device.power)}
           className={`btn ${device.power ? 'btn-primary' : 'btn-secondary'}`}
         >
           {device.power ? 'ON' : 'OFF'}
@@ -39,7 +40,7 @@ const KasaControl = ({ device }: Props) => {
               min="1"
               max="100"
               value={device.brightness}
-              onChange={(e) => control('brightness', parseInt(e.target.value))}
+              onChange={(e) => control(e, 'brightness', parseInt(e.target.value))}
               className="w-full"
             />
           </div>
@@ -53,7 +54,7 @@ const KasaControl = ({ device }: Props) => {
                 max="9000"
                 step="100"
                 value={device.colorTemp}
-                onChange={(e) => control('colorTemp', parseInt(e.target.value))}
+                onChange={(e) => control(e, 'colorTemp', parseInt(e.target.value))}
                 className="w-full"
               />
             </div>

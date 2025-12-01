@@ -6,7 +6,8 @@ interface Props {
 }
 
 const GreeControl = ({ device }: Props) => {
-  const control = async (command: string, value: any) => {
+  const control = async (e: React.MouseEvent | React.ChangeEvent, command: string, value: any) => {
+    e.stopPropagation(); // Prevent event from bubbling to parent card
     try {
       await api.controlDevice(device.id, command, { value });
     } catch (error) {
@@ -25,7 +26,7 @@ const GreeControl = ({ device }: Props) => {
           </div>
         </div>
         <button
-          onClick={() => control('power', !device.power)}
+          onClick={(e) => control(e, 'power', !device.power)}
           className={`btn ${device.power ? 'btn-primary' : 'btn-secondary'}`}
         >
           {device.power ? 'ON' : 'OFF'}
@@ -42,7 +43,7 @@ const GreeControl = ({ device }: Props) => {
               min="60"
               max="86"
               value={device.temperature}
-              onChange={(e) => control('temperature', parseInt(e.target.value))}
+              onChange={(e) => control(e, 'temperature', parseInt(e.target.value))}
               className="w-full"
             />
           </div>
@@ -54,7 +55,7 @@ const GreeControl = ({ device }: Props) => {
               {(['auto', 'cool', 'heat', 'dry', 'fan'] as const).map((mode) => (
                 <button
                   key={mode}
-                  onClick={() => control('mode', mode)}
+                  onClick={(e) => control(e, 'mode', mode)}
                   className={`btn text-sm ${
                     device.mode === mode ? 'btn-primary' : 'btn-secondary'
                   }`}
@@ -72,7 +73,7 @@ const GreeControl = ({ device }: Props) => {
               {(['auto', 'low', 'medium', 'high'] as const).map((speed) => (
                 <button
                   key={speed}
-                  onClick={() => control('fanSpeed', speed)}
+                  onClick={(e) => control(e, 'fanSpeed', speed)}
                   className={`btn text-sm ${
                     device.fanSpeed === speed ? 'btn-primary' : 'btn-secondary'
                   }`}
@@ -86,19 +87,19 @@ const GreeControl = ({ device }: Props) => {
           {/* Additional Options */}
           <div className="flex space-x-2">
             <button
-              onClick={() => control('turbo', !device.turbo)}
+              onClick={(e) => control(e, 'turbo', !device.turbo)}
               className={`btn flex-1 ${device.turbo ? 'btn-primary' : 'btn-secondary'}`}
             >
               Turbo
             </button>
             <button
-              onClick={() => control('quiet', !device.quiet)}
+              onClick={(e) => control(e, 'quiet', !device.quiet)}
               className={`btn flex-1 ${device.quiet ? 'btn-primary' : 'btn-secondary'}`}
             >
               Quiet
             </button>
             <button
-              onClick={() => control('light', !device.light)}
+              onClick={(e) => control(e, 'light', !device.light)}
               className={`btn flex-1 ${device.light ? 'btn-primary' : 'btn-secondary'}`}
             >
               Light
