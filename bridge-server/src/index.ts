@@ -64,7 +64,8 @@ class IceNetControlServer {
     // Enable CORS for all routes
     this.app.use(cors());
     this.app.use(express.json());
-    this.app.use(express.static('dist'));
+    // Serve frontend static files from parent directory's dist folder
+    this.app.use(express.static('../dist'));
 
     // API endpoints
     this.app.get('/api/health', (req, res) => {

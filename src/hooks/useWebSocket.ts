@@ -1,17 +1,15 @@
 import { useEffect, useRef } from 'react';
 import { useStore } from '../store';
 import { Device } from '../types';
+import { getWsUrl } from '../api';
 
 export const useWebSocket = () => {
   const wsRef = useRef<WebSocket | null>(null);
   const { updateDevice, setConnected } = useStore();
 
   useEffect(() => {
-    const wsUrl = import.meta.env.DEV
-      ? 'ws://localhost:8080/ws'
-      : `ws://${window.location.host}/ws`;
-
-    const connect = () => {
+    const connect = async () => {
+      const wsUrl = await getWsUrl();
       const ws = new WebSocket(wsUrl);
       wsRef.current = ws;
 

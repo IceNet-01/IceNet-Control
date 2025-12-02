@@ -1,0 +1,13 @@
+{
+  "_comment": "Copy this file to config.json and update the URLs with your server's IP address",
+  "_example_localhost": {
+    "apiUrl": "http://localhost:8080/api",
+    "wsUrl": "ws://localhost:8080/ws"
+  },
+  "_example_lan": {
+    "apiUrl": "http://192.168.1.100:8080/api",
+    "wsUrl": "ws://192.168.1.100:8080/ws"
+  },
+  "apiUrl": "http://localhost:8080/api",
+  "wsUrl": "ws://localhost:8080/ws"
+}

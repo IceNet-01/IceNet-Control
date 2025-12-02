@@ -1,16 +1,50 @@
 import { Device, AutomationRule, WeatherData, Scenario, SystemCoordination, VehicleProfile, SmartSchedule, ScheduleCalculation } from './types';
 
-const API_BASE = import.meta.env.DEV ? 'http://localhost:8080/api' : '/api';
+// Config loaded from public/config.json
+let configCache: { apiUrl: string; wsUrl: string } | null = null;
+
+async function getConfig() {
+  if (configCache) return configCache;
+
+  try {
+    const response = await fetch('/config.json');
+    configCache = await response.json();
+    return configCache;
+  } catch (error) {
+    console.error('Failed to load config.json, using defaults:', error);
+    // Fallback to defaults if config file not found
+    configCache = {
+      apiUrl: import.meta.env.DEV ? 'http://localhost:8080/api' : '/api',
+      wsUrl: import.meta.env.DEV ? 'ws://localhost:8080/ws' : `ws://${window.location.host}/ws`,
+    };
+    return configCache;
+  }
+}
+
+// Initialize config on module load
+const configPromise = getConfig();
+
+async function getApiBase(): Promise<string> {
+  const config = await configPromise;
+  return config.apiUrl;
+}
+
+export async function getWsUrl(): Promise<string> {
+  const config = await configPromise;
+  return config.wsUrl;
+}
 
 export const api = {
   // Devices
   async getDevices(): Promise<Device[]> {
-    const res = await fetch(`${API_BASE}/devices`);
+    const base = await getApiBase();
+    const res = await fetch(`${base}/devices`);
     return res.json();
   },
 
   async controlDevice(deviceId: string, command: string, parameters?: any): Promise<void> {
-    await fetch(`${API_BASE}/devices/${deviceId}/control`, {
+    const base = await getApiBase();
+    await fetch(`${base}/devices/${deviceId}/control`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ command, parameters }),
@@ -19,12 +53,14 @@ export const api = {
 
   // Automation
   async getRules(): Promise<AutomationRule[]> {
-    const res = await fetch(`${API_BASE}/automation/rules`);
+    const base = await getApiBase();
+    const res = await fetch(`${base}/automation/rules`);
     return res.json();
   },
 
   async addRule(rule: AutomationRule): Promise<void> {
-    await fetch(`${API_BASE}/automation/rules`, {
+    const base = await getApiBase();
+    await fetch(`${base}/automation/rules`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(rule),
@@ -32,7 +68,8 @@ export const api = {
   },
 
   async updateRule(ruleId: string, updates: Partial<AutomationRule>): Promise<void> {
-    await fetch(`${API_BASE}/automation/rules/${ruleId}`, {
+    const base = await getApiBase();
+    await fetch(`${base}/automation/rules/${ruleId}`, {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(updates),
@@ -40,25 +77,29 @@ export const api = {
   },
 
   async deleteRule(ruleId: string): Promise<void> {
-    await fetch(`${API_BASE}/automation/rules/${ruleId}`, {
+    const base = await getApiBase();
+    await fetch(`${base}/automation/rules/${ruleId}`, {
       method: 'DELETE',
     });
   },
 
   // Weather
   async getWeather(): Promise<WeatherData | null> {
-    const res = await fetch(`${API_BASE}/weather`);
+    const base = await getApiBase();
+    const res = await fetch(`${base}/weather`);
     return res.json();
   },
 
   // Config
   async getConfig(): Promise<any> {
-    const res = await fetch(`${API_BASE}/config`);
+    const base = await getApiBase();
+    const res = await fetch(`${base}/config`);
     return res.json();
   },
 
   async updateConfig(config: any): Promise<void> {
-    await fetch(`${API_BASE}/config`, {
+    const base = await getApiBase();
+    await fetch(`${base}/config`, {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(config),
@@ -67,12 +108,14 @@ export const api = {
 
   // Scenarios
   async getScenarios(): Promise<Scenario[]> {
-    const res = await fetch(`${API_BASE}/scenarios`);
+    const base = await getApiBase();
+    const res = await fetch(`${base}/scenarios`);
     return res.json();
   },
 
   async addScenario(scenario: Scenario): Promise<void> {
-    await fetch(`${API_BASE}/scenarios`, {
+    const base = await getApiBase();
+    await fetch(`${base}/scenarios`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(scenario),
@@ -80,7 +123,8 @@ export const api = {
   },
 
   async updateScenario(scenarioId: string, updates: Partial<Scenario>): Promise<void> {
-    await fetch(`${API_BASE}/scenarios/${scenarioId}`, {
+    const base = await getApiBase();
+    await fetch(`${base}/scenarios/${scenarioId}`, {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(updates),
@@ -88,25 +132,29 @@ export const api = {
   },
 
   async deleteScenario(scenarioId: string): Promise<void> {
-    await fetch(`${API_BASE}/scenarios/${scenarioId}`, {
+    const base = await getApiBase();
+    await fetch(`${base}/scenarios/${scenarioId}`, {
       method: 'DELETE',
     });
   },
 
   async executeScenario(scenarioId: string): Promise<void> {
-    await fetch(`${API_BASE}/scenarios/${scenarioId}/execute`, {
+    const base = await getApiBase();
+    await fetch(`${base}/scenarios/${scenarioId}/execute`, {
       method: 'POST',
     });
   },
 
   // System Coordinations
   async getCoordinations(): Promise<SystemCoordination[]> {
-    const res = await fetch(`${API_BASE}/coordinations`);
+    const base = await getApiBase();
+    const res = await fetch(`${base}/coordinations`);
     return res.json();
   },
 
   async addCoordination(coordination: SystemCoordination): Promise<void> {
-    await fetch(`${API_BASE}/coordinations`, {
+    const base = await getApiBase();
+    await fetch(`${base}/coordinations`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(coordination),
@@ -114,7 +162,8 @@ export const api = {
   },
 
   async updateCoordination(coordinationId: string, updates: Partial<SystemCoordination>): Promise<void> {
-    await fetch(`${API_BASE}/coordinations/${coordinationId}`, {
+    const base = await getApiBase();
+    await fetch(`${base}/coordinations/${coordinationId}`, {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(updates),
@@ -122,19 +171,22 @@ export const api = {
   },
 
   async deleteCoordination(coordinationId: string): Promise<void> {
-    await fetch(`${API_BASE}/coordinations/${coordinationId}`, {
+    const base = await getApiBase();
+    await fetch(`${base}/coordinations/${coordinationId}`, {
       method: 'DELETE',
     });
   },
 
   // Vehicle Profiles
   async getVehicles(): Promise<VehicleProfile[]> {
-    const res = await fetch(`${API_BASE}/vehicles`);
+    const base = await getApiBase();
+    const res = await fetch(`${base}/vehicles`);
     return res.json();
   },
 
   async addVehicle(vehicle: VehicleProfile): Promise<void> {
-    await fetch(`${API_BASE}/vehicles`, {
+    const base = await getApiBase();
+    await fetch(`${base}/vehicles`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(vehicle),
@@ -142,7 +194,8 @@ export const api = {
   },
 
   async updateVehicle(profileId: string, updates: Partial<VehicleProfile>): Promise<void> {
-    await fetch(`${API_BASE}/vehicles/${profileId}`, {
+    const base = await getApiBase();
+    await fetch(`${base}/vehicles/${profileId}`, {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(updates),
@@ -150,24 +203,28 @@ export const api = {
   },
 
   async deleteVehicle(profileId: string): Promise<void> {
-    await fetch(`${API_BASE}/vehicles/${profileId}`, {
+    const base = await getApiBase();
+    await fetch(`${base}/vehicles/${profileId}`, {
       method: 'DELETE',
     });
   },
 
   // Smart Schedules
   async getSmartSchedules(): Promise<SmartSchedule[]> {
-    const res = await fetch(`${API_BASE}/smart-schedules`);
+    const base = await getApiBase();
+    const res = await fetch(`${base}/smart-schedules`);
     return res.json();
   },
 
   async getUpcomingSchedules(hours: number = 24): Promise<ScheduleCalculation[]> {
-    const res = await fetch(`${API_BASE}/smart-schedules/upcoming?hours=${hours}`);
+    const base = await getApiBase();
+    const res = await fetch(`${base}/smart-schedules/upcoming?hours=${hours}`);
     return res.json();
   },
 
   async addSmartSchedule(schedule: SmartSchedule): Promise<void> {
-    await fetch(`${API_BASE}/smart-schedules`, {
+    const base = await getApiBase();
+    await fetch(`${base}/smart-schedules`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(schedule),
@@ -175,7 +232,8 @@ export const api = {
   },
 
   async updateSmartSchedule(scheduleId: string, updates: Partial<SmartSchedule>): Promise<void> {
-    await fetch(`${API_BASE}/smart-schedules/${scheduleId}`, {
+    const base = await getApiBase();
+    await fetch(`${base}/smart-schedules/${scheduleId}`, {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(updates),
@@ -183,7 +241,8 @@ export const api = {
   },
 
   async deleteSmartSchedule(scheduleId: string): Promise<void> {
-    await fetch(`${API_BASE}/smart-schedules/${scheduleId}`, {
+    const base = await getApiBase();
+    await fetch(`${base}/smart-schedules/${scheduleId}`, {
       method: 'DELETE',
     });
   },
