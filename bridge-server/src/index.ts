@@ -8,9 +8,11 @@ import { GreeManager } from './devices/GreeManager.js';
 import { KasaManager } from './devices/KasaManager.js';
 import { GoodEarthManager } from './devices/GoodEarthManager.js';
 import { AutomationEngine } from './automation/AutomationEngine.js';
+import { SmartScheduler } from './automation/SmartScheduler.js';
 import { WeatherService } from './services/WeatherService.js';
 import { ScenarioManager } from './scenarios/ScenarioManager.js';
-import { Device, AutomationRule, Scenario, SystemCoordination } from './types.js';
+import { SmartScheduleDatabase } from './database/SmartScheduleDatabase.js';
+import { Device, AutomationRule, Scenario, SystemCoordination, VehicleProfile, SmartSchedule } from './types.js';
 
 
 class IceNetControlServer {
@@ -19,6 +21,7 @@ class IceNetControlServer {
   private configManager = new ConfigManager();
   private wsManager = new WebSocketManager(this.server);
   private database = new DeviceDatabase();
+  private smartScheduleDb = new SmartScheduleDatabase();
 
   // Device managers
   private greeManager?: GreeManager;
@@ -29,15 +32,18 @@ class IceNetControlServer {
   private weatherService?: WeatherService;
   private automationEngine?: AutomationEngine;
   private scenarioManager?: ScenarioManager;
+  private smartScheduler?: SmartScheduler;
 
   async init() {
     await this.database.initialize();
+    await this.smartScheduleDb.initialize();
     this.setupExpress();
     this.setupWebSocket();
     this.setupScenarios();
     this.setupDeviceManagers();
-    this.setupAutomation();
     this.setupWeather();
+    this.setupAutomation();
+    this.setupSmartScheduler();
   }
 
   private setupWebSocket(): void {
@@ -174,6 +180,94 @@ class IceNetControlServer {
       const { coordinationId } = req.params;
       this.scenarioManager?.deleteCoordination(coordinationId);
       res.json({ success: true });
+    });
+
+    // Vehicle profile endpoints
+    this.app.get('/api/vehicles', (req, res) => {
+      const profiles = this.smartScheduleDb.getAllVehicleProfiles();
+      res.json(profiles);
+    });
+
+    this.app.post('/api/vehicles', async (req, res) => {
+      try {
+        const profile: VehicleProfile = req.body;
+        await this.smartScheduleDb.saveVehicleProfile(profile);
+        this.smartScheduler?.addVehicleProfile(profile);
+        res.json({ success: true });
+      } catch (error: any) {
+        res.status(500).json({ error: error.message });
+      }
+    });
+
+    this.app.put('/api/vehicles/:profileId', async (req, res) => {
+      try {
+        const profile: VehicleProfile = req.body;
+        await this.smartScheduleDb.saveVehicleProfile(profile);
+        this.smartScheduler?.addVehicleProfile(profile);
+        res.json({ success: true });
+      } catch (error: any) {
+        res.status(500).json({ error: error.message });
+      }
+    });
+
+    this.app.delete('/api/vehicles/:profileId', async (req, res) => {
+      try {
+        const { profileId } = req.params;
+        await this.smartScheduleDb.deleteVehicleProfile(profileId);
+        this.smartScheduler?.removeVehicleProfile(profileId);
+        res.json({ success: true });
+      } catch (error: any) {
+        res.status(500).json({ error: error.message });
+      }
+    });
+
+    // Smart schedule endpoints
+    this.app.get('/api/smart-schedules', (req, res) => {
+      const schedules = this.smartScheduleDb.getAllSmartSchedules();
+      res.json(schedules);
+    });
+
+    this.app.get('/api/smart-schedules/upcoming', async (req, res) => {
+      try {
+        const hours = parseInt(req.query.hours as string) || 24;
+        const upcoming = await this.smartScheduler?.getUpcomingSchedules(hours);
+        res.json(upcoming || []);
+      } catch (error: any) {
+        res.status(500).json({ error: error.message });
+      }
+    });
+
+    this.app.post('/api/smart-schedules', async (req, res) => {
+      try {
+        const schedule: SmartSchedule = req.body;
+        await this.smartScheduleDb.saveSmartSchedule(schedule);
+        this.smartScheduler?.addSchedule(schedule);
+        res.json({ success: true });
+      } catch (error: any) {
+        res.status(500).json({ error: error.message });
+      }
+    });
+
+    this.app.put('/api/smart-schedules/:scheduleId', async (req, res) => {
+      try {
+        const schedule: SmartSchedule = req.body;
+        await this.smartScheduleDb.saveSmartSchedule(schedule);
+        this.smartScheduler?.addSchedule(schedule);
+        res.json({ success: true });
+      } catch (error: any) {
+        res.status(500).json({ error: error.message });
+      }
+    });
+
+    this.app.delete('/api/smart-schedules/:scheduleId', async (req, res) => {
+      try {
+        const { scheduleId } = req.params;
+        await this.smartScheduleDb.deleteSmartSchedule(scheduleId);
+        this.smartScheduler?.removeSchedule(scheduleId);
+        res.json({ success: true });
+      } catch (error: any) {
+        res.status(500).json({ error: error.message });
+      }
     });
   }
 
@@ -321,6 +415,71 @@ class IceNetControlServer {
     }
   }
 
+  private setupSmartScheduler(): void {
+    if (!this.weatherService) {
+      console.warn('[SmartScheduler] Weather service not available, smart scheduling disabled');
+      return;
+    }
+
+    // Create smart scheduler
+    this.smartScheduler = new SmartScheduler(this.weatherService);
+
+    // Load saved vehicle profiles
+    const profiles = this.smartScheduleDb.getAllVehicleProfiles();
+    profiles.forEach((profile) => this.smartScheduler!.addVehicleProfile(profile));
+
+    // Load saved schedules
+    const schedules = this.smartScheduleDb.getAllSmartSchedules();
+    schedules.forEach((schedule) => this.smartScheduler!.addSchedule(schedule));
+
+    // Handle schedule trigger ON events
+    this.smartScheduler.on('schedule_trigger_on', async (data: any) => {
+      try {
+        console.log(`[SmartScheduler] Triggering ON for ${data.scheduleId}, runtime: ${data.runtimeMinutes} minutes`);
+        await this.controlDevice(data.deviceId, 'power', { value: true });
+
+        // Update schedule in database
+        const schedule = this.smartScheduleDb.getSmartSchedule(data.scheduleId);
+        if (schedule) {
+          schedule.lastExecuted = new Date();
+          schedule.lastScheduledStart = data.calculation.startTime;
+          schedule.lastCalculatedRuntime = data.runtimeMinutes;
+          await this.smartScheduleDb.saveSmartSchedule(schedule);
+        }
+
+        // Broadcast event
+        this.wsManager.broadcast({
+          type: 'smart_schedule_triggered',
+          payload: { action: 'on', ...data },
+          timestamp: new Date(),
+        });
+      } catch (error) {
+        console.error('[SmartScheduler] Error turning on device:', error);
+      }
+    });
+
+    // Handle schedule trigger OFF events
+    this.smartScheduler.on('schedule_trigger_off', async (data: any) => {
+      try {
+        console.log(`[SmartScheduler] Triggering OFF for ${data.scheduleId}`);
+        await this.controlDevice(data.deviceId, 'power', { value: false });
+
+        // Broadcast event
+        this.wsManager.broadcast({
+          type: 'smart_schedule_triggered',
+          payload: { action: 'off', ...data },
+          timestamp: new Date(),
+        });
+      } catch (error) {
+        console.error('[SmartScheduler] Error turning off device:', error);
+      }
+    });
+
+    // Start the scheduler
+    this.smartScheduler.start();
+    console.log('[SmartScheduler] Smart scheduler initialized and started');
+  }
+
   private getAllDevices(): Device[] {
     const devices: Device[] = [];
 
@@ -391,14 +550,16 @@ class IceNetControlServer {
     console.log('\nShutting down IceNet Control Server...');
 
     this.automationEngine?.stopMonitoring();
+    this.smartScheduler?.stop();
     this.weatherService?.stopUpdates();
 
     await this.greeManager?.cleanup();
     await this.kasaManager?.cleanup();
     await this.goodEarthManager?.cleanup();
 
-    // Flush database to disk
+    // Flush databases to disk
     await this.database.flush();
+    await this.smartScheduleDb.cleanup();
 
     this.server.close();
     console.log('Server stopped');

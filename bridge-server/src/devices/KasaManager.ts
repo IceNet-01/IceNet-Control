@@ -5,7 +5,7 @@ import tplinkApi from 'tplink-smarthome-api';
 const { Client } = tplinkApi;
 
 export class KasaManager extends BaseDeviceManager {
-  private client: Client;
+  private client: InstanceType<typeof Client>;
 
   constructor() {
     super('kasa');

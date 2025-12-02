@@ -33,7 +33,9 @@ export class DeviceDatabase {
       this.devices.clear();
       devicesArray.forEach(device => {
         // Convert date strings back to Date objects
-        device.lastSeen = new Date(device.lastSeen);
+        if (device.lastSeen) {
+          device.lastSeen = new Date(device.lastSeen);
+        }
         this.devices.set(device.id, device);
       });
     } catch (error: any) {

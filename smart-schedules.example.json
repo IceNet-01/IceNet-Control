@@ -1,0 +1,86 @@
+{
+  "vehicleProfiles": {
+    "ford-f150-2018": {
+      "id": "ford-f150-2018",
+      "name": "2018 Ford F-150",
+      "make": "Ford",
+      "model": "F-150",
+      "year": 2018,
+      "engineType": "gas-6cyl",
+      "engineSize": 3.5,
+      "coolantCapacity": 13.7,
+      "blockHeaterWattage": 1000,
+      "hasEngineBlocket": false,
+      "notes": "Daily driver truck"
+    },
+    "ram-2500-diesel": {
+      "id": "ram-2500-diesel",
+      "name": "2020 RAM 2500 Diesel",
+      "make": "RAM",
+      "model": "2500",
+      "year": 2020,
+      "engineType": "diesel-6cyl",
+      "engineSize": 6.7,
+      "coolantCapacity": 28.4,
+      "blockHeaterWattage": 1500,
+      "hasEngineBlocket": true,
+      "notes": "Work truck with engine blanket"
+    }
+  },
+  "smartSchedules": {
+    "f150-weekday-commute": {
+      "id": "f150-weekday-commute",
+      "name": "F-150 Weekday Commute",
+      "description": "Monday-Friday 7:00 AM departure for work",
+      "enabled": true,
+      "deviceId": "kasa_plug_garage_1",
+      "vehicleProfileId": "ford-f150-2018",
+      "departureTime": "07:00",
+      "daysOfWeek": [1, 2, 3, 4, 5],
+      "minRuntime": 30,
+      "maxRuntime": 240,
+      "targetTemp": 110,
+      "noHeatAbove": 39,
+      "fullHeatBelow": -22,
+      "useWeatherForecast": true,
+      "accountForWindChill": true,
+      "bufferMinutes": 10
+    },
+    "ram-early-shift": {
+      "id": "ram-early-shift",
+      "name": "RAM 2500 Early Shift",
+      "description": "Early morning starts for work truck",
+      "enabled": true,
+      "deviceId": "kasa_plug_shop_1",
+      "vehicleProfileId": "ram-2500-diesel",
+      "departureTime": "05:00",
+      "daysOfWeek": [1, 2, 3, 4, 5],
+      "minRuntime": 60,
+      "maxRuntime": 240,
+      "targetTemp": 120,
+      "noHeatAbove": 39,
+      "fullHeatBelow": -22,
+      "useWeatherForecast": true,
+      "accountForWindChill": true,
+      "bufferMinutes": 15
+    },
+    "weekend-trips": {
+      "id": "weekend-trips",
+      "name": "Weekend Trip Prep",
+      "description": "Saturday/Sunday 9:00 AM departure",
+      "enabled": false,
+      "deviceId": "kasa_plug_garage_1",
+      "vehicleProfileId": "ford-f150-2018",
+      "departureTime": "09:00",
+      "daysOfWeek": [0, 6],
+      "minRuntime": 30,
+      "maxRuntime": 180,
+      "targetTemp": 110,
+      "noHeatAbove": 32,
+      "fullHeatBelow": -10,
+      "useWeatherForecast": true,
+      "accountForWindChill": false,
+      "bufferMinutes": 5
+    }
+  }
+}

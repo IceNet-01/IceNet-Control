@@ -9,7 +9,7 @@ import TuyAPI from 'tuyapi';
  * This implementation uses tuyapi for local control without cloud dependency.
  */
 export class GoodEarthManager extends BaseDeviceManager {
-  private devices: Map<string, any> = new Map();
+  protected devices: Map<string, any> = new Map();
   private tuyaDevices: Map<string, TuyAPI> = new Map();
   private knownDevices: Array<{ ip: string; id?: string; key?: string }> = [];
 

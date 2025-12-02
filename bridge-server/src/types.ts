@@ -143,7 +143,7 @@ export interface WeatherData {
 
 // WebSocket message types
 export interface WSMessage {
-  type: 'device_update' | 'device_command' | 'automation_triggered' | 'scenario_executed' | 'config_update' | 'weather_update' | 'error';
+  type: 'device_update' | 'device_command' | 'automation_triggered' | 'scenario_executed' | 'smart_schedule_triggered' | 'config_update' | 'weather_update' | 'error';
   payload: any;
   timestamp: Date;
 }
@@ -179,4 +179,53 @@ export interface BridgeConfig {
     enabled: boolean;
     checkInterval: number; // seconds
   };
+}
+
+// Vehicle Profile types for block heater optimization
+export type EngineType = 'gas-4cyl' | 'gas-6cyl' | 'gas-8cyl' | 'diesel-4cyl' | 'diesel-6cyl' | 'diesel-8cyl';
+
+export interface VehicleProfile {
+  id: string;
+  name: string; // e.g., "2018 Ford F-150"
+  make: string;
+  model: string;
+  year: number;
+  engineType: EngineType;
+  engineSize: number; // Displacement in liters
+  coolantCapacity?: number; // Liters
+  blockHeaterWattage?: number; // Watts (defaults based on engine type if not specified)
+  hasEngineBlocket?: boolean; // Engine blanket provides better insulation
+  notes?: string;
+}
+
+// Smart Schedule for temperature-based device scheduling (e.g., block heaters)
+export interface SmartSchedule {
+  id: string;
+  name: string;
+  description?: string;
+  enabled: boolean;
+  deviceId: string; // The Kasa smart plug controlling the block heater
+  vehicleProfileId?: string; // Optional vehicle profile for optimization
+  departureTime: string; // HH:MM format
+  daysOfWeek: number[]; // 0-6 (Sunday-Saturday), empty array = every day
+
+  // Algorithm parameters
+  minRuntime: number; // Minimum minutes (e.g., 30)
+  maxRuntime: number; // Maximum minutes (e.g., 240 = 4 hours)
+  targetTemp: number; // Target coolant temp in Fahrenheit (default: 100-120°F)
+
+  // Temperature thresholds
+  noHeatAbove: number; // Don't run heater if temp above this (e.g., 39°F)
+  fullHeatBelow: number; // Run max time if temp below this (e.g., -22°F)
+
+  // Advanced options
+  useWeatherForecast: boolean; // Use forecast temp at departure time
+  accountForWindChill: boolean; // Factor in wind chill
+  bufferMinutes: number; // Extra minutes before departure (e.g., 10 min buffer)
+
+  // Tracking
+  lastCalculatedRuntime?: number; // Minutes
+  lastScheduledStart?: Date;
+  nextScheduledStart?: Date;
+  lastExecuted?: Date;
 }
