@@ -127,3 +127,52 @@ export interface WeatherData {
   timestamp: Date;
   location?: string;
 }
+
+// Smart Scheduling Types
+export type EngineType = 'gas-4cyl' | 'gas-6cyl' | 'gas-8cyl' | 'diesel-4cyl' | 'diesel-6cyl' | 'diesel-8cyl';
+
+export interface VehicleProfile {
+  id: string;
+  name: string;
+  make: string;
+  model: string;
+  year: number;
+  engineType: EngineType;
+  engineSize: number;
+  coolantCapacity?: number;
+  blockHeaterWattage?: number;
+  hasEngineBlocket?: boolean;
+  notes?: string;
+}
+
+export interface SmartSchedule {
+  id: string;
+  name: string;
+  description?: string;
+  enabled: boolean;
+  deviceId: string;
+  vehicleProfileId?: string;
+  departureTime: string;
+  daysOfWeek: number[];
+  minRuntime: number;
+  maxRuntime: number;
+  targetTemp: number;
+  noHeatAbove: number;
+  fullHeatBelow: number;
+  useWeatherForecast: boolean;
+  accountForWindChill: boolean;
+  bufferMinutes: number;
+  lastCalculatedRuntime?: number;
+  lastScheduledStart?: Date;
+  nextScheduledStart?: Date;
+  lastExecuted?: Date;
+}
+
+export interface ScheduleCalculation {
+  scheduleId: string;
+  runtimeMinutes: number;
+  startTime: Date;
+  departureTime: Date;
+  ambientTemp: number;
+  reason: string;
+}

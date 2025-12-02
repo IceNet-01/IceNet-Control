@@ -9,24 +9,30 @@ import Devices from './pages/Devices';
 import Automation from './pages/Automation';
 import Scenarios from './pages/Scenarios';
 import Coordinations from './pages/Coordinations';
+import Vehicles from './pages/Vehicles';
+import SmartScheduling from './pages/SmartScheduling';
 import Settings from './pages/Settings';
 
 function App() {
   useWebSocket();
-  const { setDevices, setRules, setWeather } = useStore();
+  const { setDevices, setRules, setWeather, setVehicles, setSmartSchedules } = useStore();
 
   useEffect(() => {
     // Initial data fetch
     const fetchData = async () => {
       try {
-        const [devices, rules, weather] = await Promise.all([
+        const [devices, rules, weather, vehicles, smartSchedules] = await Promise.all([
           api.getDevices(),
           api.getRules(),
           api.getWeather(),
+          api.getVehicles(),
+          api.getSmartSchedules(),
         ]);
         setDevices(devices);
         setRules(rules);
         setWeather(weather);
+        setVehicles(vehicles);
+        setSmartSchedules(smartSchedules);
       } catch (error) {
         console.error('Error fetching initial data:', error);
       }
@@ -36,7 +42,7 @@ function App() {
     const interval = setInterval(fetchData, 30000); // Refresh every 30s
 
     return () => clearInterval(interval);
-  }, [setDevices, setRules, setWeather]);
+  }, [setDevices, setRules, setWeather, setVehicles, setSmartSchedules]);
 
   return (
     <BrowserRouter>
@@ -46,6 +52,8 @@ function App() {
           <Routes>
             <Route path="/" element={<Dashboard />} />
             <Route path="/devices" element={<Devices />} />
+            <Route path="/vehicles" element={<Vehicles />} />
+            <Route path="/smart-scheduling" element={<SmartScheduling />} />
             <Route path="/automation" element={<Automation />} />
             <Route path="/scenarios" element={<Scenarios />} />
             <Route path="/coordinations" element={<Coordinations />} />

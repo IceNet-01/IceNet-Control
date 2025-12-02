@@ -10,6 +10,8 @@ const Navigation = () => {
   const navItems = [
     { path: '/', label: 'Dashboard' },
     { path: '/devices', label: 'Devices' },
+    { path: '/vehicles', label: 'Vehicles' },
+    { path: '/smart-scheduling', label: 'Smart Scheduling' },
     { path: '/automation', label: 'Automation' },
     { path: '/scenarios', label: 'Scenarios' },
     { path: '/coordinations', label: 'Synergy' },

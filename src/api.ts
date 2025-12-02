@@ -1,4 +1,4 @@
-import { Device, AutomationRule, WeatherData, Scenario, SystemCoordination } from './types';
+import { Device, AutomationRule, WeatherData, Scenario, SystemCoordination, VehicleProfile, SmartSchedule, ScheduleCalculation } from './types';
 
 const API_BASE = import.meta.env.DEV ? 'http://localhost:8080/api' : '/api';
 
@@ -123,6 +123,67 @@ export const api = {
 
   async deleteCoordination(coordinationId: string): Promise<void> {
     await fetch(`${API_BASE}/coordinations/${coordinationId}`, {
+      method: 'DELETE',
+    });
+  },
+
+  // Vehicle Profiles
+  async getVehicles(): Promise<VehicleProfile[]> {
+    const res = await fetch(`${API_BASE}/vehicles`);
+    return res.json();
+  },
+
+  async addVehicle(vehicle: VehicleProfile): Promise<void> {
+    await fetch(`${API_BASE}/vehicles`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(vehicle),
+    });
+  },
+
+  async updateVehicle(profileId: string, updates: Partial<VehicleProfile>): Promise<void> {
+    await fetch(`${API_BASE}/vehicles/${profileId}`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(updates),
+    });
+  },
+
+  async deleteVehicle(profileId: string): Promise<void> {
+    await fetch(`${API_BASE}/vehicles/${profileId}`, {
+      method: 'DELETE',
+    });
+  },
+
+  // Smart Schedules
+  async getSmartSchedules(): Promise<SmartSchedule[]> {
+    const res = await fetch(`${API_BASE}/smart-schedules`);
+    return res.json();
+  },
+
+  async getUpcomingSchedules(hours: number = 24): Promise<ScheduleCalculation[]> {
+    const res = await fetch(`${API_BASE}/smart-schedules/upcoming?hours=${hours}`);
+    return res.json();
+  },
+
+  async addSmartSchedule(schedule: SmartSchedule): Promise<void> {
+    await fetch(`${API_BASE}/smart-schedules`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(schedule),
+    });
+  },
+
+  async updateSmartSchedule(scheduleId: string, updates: Partial<SmartSchedule>): Promise<void> {
+    await fetch(`${API_BASE}/smart-schedules/${scheduleId}`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(updates),
+    });
+  },
+
+  async deleteSmartSchedule(scheduleId: string): Promise<void> {
+    await fetch(`${API_BASE}/smart-schedules/${scheduleId}`, {
       method: 'DELETE',
     });
   },

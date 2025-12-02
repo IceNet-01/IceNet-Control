@@ -25,6 +25,19 @@
       "blockHeaterWattage": 1500,
       "hasEngineBlocket": true,
       "notes": "Work truck with engine blanket"
+    },
+    "excursion-2000-73-powerstroke": {
+      "id": "excursion-2000-73-powerstroke",
+      "name": "2000 Ford Excursion 7.3L Powerstroke",
+      "make": "Ford",
+      "model": "Excursion",
+      "year": 2000,
+      "engineType": "diesel-8cyl",
+      "engineSize": 7.3,
+      "coolantCapacity": 27.0,
+      "blockHeaterWattage": 1500,
+      "hasEngineBlocket": false,
+      "notes": "Requires 6 hours at 1°F (real-world tested)"
     }
   },
   "smartSchedules": {
@@ -56,13 +69,31 @@
       "departureTime": "05:00",
       "daysOfWeek": [1, 2, 3, 4, 5],
       "minRuntime": 60,
-      "maxRuntime": 240,
+      "maxRuntime": 360,
       "targetTemp": 120,
       "noHeatAbove": 39,
       "fullHeatBelow": -22,
       "useWeatherForecast": true,
       "accountForWindChill": true,
       "bufferMinutes": 15
+    },
+    "excursion-73-extreme-cold": {
+      "id": "excursion-73-extreme-cold",
+      "name": "Excursion 7.3 Extreme Cold",
+      "description": "7.3 Powerstroke needs 6 hours in extreme cold (real-world tested)",
+      "enabled": true,
+      "deviceId": "kasa_plug_garage_2",
+      "vehicleProfileId": "excursion-2000-73-powerstroke",
+      "departureTime": "07:00",
+      "daysOfWeek": [1, 2, 3, 4, 5],
+      "minRuntime": 90,
+      "maxRuntime": 360,
+      "targetTemp": 120,
+      "noHeatAbove": 39,
+      "fullHeatBelow": -22,
+      "useWeatherForecast": true,
+      "accountForWindChill": true,
+      "bufferMinutes": 10
     },
     "weekend-trips": {
       "id": "weekend-trips",

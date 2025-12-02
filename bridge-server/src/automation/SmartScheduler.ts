@@ -119,11 +119,11 @@ export class SmartScheduler extends EventEmitter {
   /**
    * Calculate required runtime based on temperature and vehicle characteristics
    *
-   * Algorithm based on research:
-   * - 2-4 hours is optimal (heat loss balances heat input after this)
+   * Algorithm based on REAL-WORLD DATA:
+   * - 2000 Excursion 7.3L diesel at 1°F needs 6 hours
    * - Above 39°F: Minimal heating needed
    * - 39°F to -22°F: Scaled runtime
-   * - Below -22°F: Maximum runtime (4 hours)
+   * - Below -22°F: Maximum runtime (varies by engine)
    *
    * @param tempF Ambient temperature in Fahrenheit
    * @param schedule The smart schedule configuration
@@ -158,14 +158,29 @@ export class SmartScheduler extends EventEmitter {
 
     // Adjust for vehicle-specific factors if profile provided
     if (vehicleProfile) {
-      // Diesel engines need more time due to higher compression and thicker oil
+      // Diesel engines need SIGNIFICANTLY more time due to:
+      // - Higher compression ratios
+      // - Thicker oil at cold temps
+      // - Larger coolant capacity
+      // - Direct injection requiring higher cylinder temps
       if (vehicleProfile.engineType.startsWith('diesel')) {
-        baseRuntime *= 1.15; // 15% longer for diesel
-      }
+        // Base diesel multiplier
+        baseRuntime *= 1.35; // 35% longer for diesel (increased from 15%)
 
-      // Larger engines need slightly more time
-      if (vehicleProfile.engineSize >= 5.0) {
-        baseRuntime *= 1.1; // 10% longer for large engines
+        // Additional time for LARGE diesels (6.0L+)
+        if (vehicleProfile.engineSize >= 6.0) {
+          baseRuntime *= 1.25; // Another 25% for large diesels
+        }
+
+        // Extra time for HEAVY DUTY diesels (6.7L+)
+        if (vehicleProfile.engineSize >= 6.7) {
+          baseRuntime *= 1.15; // Another 15% for heavy duty
+        }
+      } else {
+        // Gas engines still need extra time if large
+        if (vehicleProfile.engineSize >= 6.0) {
+          baseRuntime *= 1.2; // 20% longer for large gas engines
+        }
       }
 
       // Engine blanket reduces runtime by 15-20%
