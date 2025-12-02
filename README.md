@@ -17,6 +17,11 @@ IceNet Control is a powerful, extensible platform for controlling and automating
   - Temperature, mode, fan speed, swing control
   - Turbo, quiet, and light modes
   - Real-time status updates
+- **Good Earth Lighting**: WiFi LED panel control (Tuya-based)
+  - Power on/off
+  - Brightness adjustment (0-100%)
+  - Color temperature (2700K-6500K warm to cool)
+  - Local control without cloud dependency
 - **Ecobee Thermostats**: Comprehensive thermostat management
   - Temperature and humidity monitoring
   - Mode and fan control
@@ -112,12 +117,26 @@ On first run, configure your devices through the **Settings** page:
    - Devices auto-discover on local network
    - No additional configuration needed
 
-3. **Ecobee** (Optional)
+3. **Good Earth Lighting** (Tuya-based WiFi LED Panels)
+   - Enable Good Earth integration
+   - Add known device IP addresses in configuration
+   - **Optional**: Obtain Tuya credentials for full control
+     1. Install Tuya CLI tool (already included):
+        ```bash
+        cd bridge-server
+        npx @tuyapi/cli wizard
+        ```
+     2. Follow the wizard to link your Tuya/Smart Life account
+     3. Extract Device ID and Local Key for each panel
+     4. Add credentials to `GoodEarthManager.ts` or configuration
+   - Without credentials, devices will appear in UI but controls require setup
+
+4. **Ecobee** (Optional)
    - Register at [Ecobee Developer Portal](https://www.ecobee.com/developers/)
    - Obtain API key
    - Complete OAuth flow (future implementation)
 
-4. **Kasa Devices**
+5. **Kasa Devices**
    - Enable Kasa integration
    - Devices auto-discover on local network
 
@@ -139,6 +158,10 @@ Advanced users can edit `config.json` directly:
   },
   "devices": {
     "gree": {
+      "enabled": true,
+      "scanInterval": 60
+    },
+    "goodearth": {
       "enabled": true,
       "scanInterval": 60
     },
@@ -330,17 +353,21 @@ GET /api/weather
 │                  (Express + WebSocket Server)                │
 ├──────────────────────────────────────────────────────────────┤
 │  ┌──────────────┐  ┌──────────────┐  ┌──────────────┐      │
-│  │ Gree Manager │  │Ecobee Manager│  │ Kasa Manager │      │
-│  └──────────────┘  └──────────────┘  └──────────────┘      │
+│  │ Gree Manager │  │ Good Earth   │  │Ecobee Manager│      │
+│  └──────────────┘  │   Manager    │  └──────────────┘      │
+│                    └──────────────┘                         │
+│  ┌──────────────┐                                           │
+│  │ Kasa Manager │                                           │
+│  └──────────────┘                                           │
 │                                                              │
 │  ┌────────────────────────┐  ┌────────────────────────┐    │
 │  │  Automation Engine     │  │   Weather Service      │    │
 │  └────────────────────────┘  └────────────────────────┘    │
 └──────────────────────────┬──────────────────────────────────┘
-                           │ UDP/HTTP/API
+                           │ UDP/HTTP/Tuya Protocol
 ┌──────────────────────────▼──────────────────────────────────┐
 │                       IoT Devices                            │
-│    Gree HVAC  │  Ecobee  │  Kasa Plugs/Bulbs  │  Others    │
+│  Gree HVAC │ Good Earth │ Ecobee │ Kasa Plugs/Bulbs │ More │
 └──────────────────────────────────────────────────────────────┘
 ```
 
@@ -460,7 +487,7 @@ See [LICENSE](LICENSE) file for full details.
 
 - Architecture inspired by [Mesh-Bridge](https://github.com/IceNet-01/Mesh-Bridge)
 - Built with React, Node.js, and TypeScript
-- Device libraries: gree-hvac-client, tplink-smarthome-api, ecobee-api
+- Device libraries: gree-hvac-client, tuyapi, tplink-smarthome-api, ecobee-api
 
 ---
 

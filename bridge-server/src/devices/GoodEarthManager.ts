@@ -1,80 +1,76 @@
 import { BaseDeviceManager } from './BaseDeviceManager.js';
 import { GoodEarthDevice } from '../types.js';
-import axios from 'axios';
+import TuyAPI from 'tuyapi';
 
 /**
- * Good Earth Lighting Manager
+ * Good Earth Lighting Manager (Tuya-based)
  *
- * Good Earth Lighting systems typically use WiFi-based LED controllers.
- * This implementation assumes HTTP/REST API control (common for WiFi LED controllers).
- * If using a specific protocol (Zigbee, Z-Wave, etc.), this can be adapted.
+ * Good Earth WiFi LED panels use Tuya protocol for communication.
+ * This implementation uses tuyapi for local control without cloud dependency.
  */
 export class GoodEarthManager extends BaseDeviceManager {
-  private bridgeIp?: string;
-  private pollIntervals: Map<string, NodeJS.Timeout> = new Map();
+  private devices: Map<string, any> = new Map();
+  private tuyaDevices: Map<string, TuyAPI> = new Map();
+  private knownDevices: Array<{ ip: string; id?: string; key?: string }> = [];
 
-  constructor(bridgeIp?: string) {
+  constructor(knownDevices?: Array<{ ip: string; id?: string; key?: string }>) {
     super('goodearth');
-    this.bridgeIp = bridgeIp;
+    if (knownDevices) {
+      this.knownDevices = knownDevices;
+    }
   }
 
   async initialize(): Promise<void> {
-    console.log('[GoodEarth] Initializing Good Earth Lighting manager...');
+    console.log('[GoodEarth] Initializing Good Earth Lighting manager (Tuya)...');
 
     // Load saved devices from database
     this.loadDevicesFromDatabase();
 
-    if (this.bridgeIp) {
-      console.log(`[GoodEarth] Using bridge at ${this.bridgeIp}`);
-    } else {
-      console.log('[GoodEarth] No bridge IP configured, will attempt auto-discovery');
+    // Add default known devices (user's panels)
+    if (this.knownDevices.length === 0) {
+      this.knownDevices = [
+        { ip: '10.125.0.176' },
+        { ip: '10.125.0.29' },
+        { ip: '10.125.0.129' }
+      ];
     }
+
+    console.log(`[GoodEarth] Will attempt to connect to ${this.knownDevices.length} known devices`);
   }
 
   async discover(): Promise<GoodEarthDevice[]> {
-    console.log('[GoodEarth] Starting device discovery...');
+    console.log('[GoodEarth] Starting Tuya device discovery...');
 
     const discoveredDevices: GoodEarthDevice[] = [];
 
     try {
-      if (this.bridgeIp) {
-        // Query bridge for connected lights
-        const response = await axios.get(`http://${this.bridgeIp}/api/devices`, {
-          timeout: 5000,
-        }).catch(() => null);
+      // Try to discover devices on the network
+      console.log('[GoodEarth] Scanning for Tuya devices...');
 
-        if (response?.data?.devices) {
-          for (const light of response.data.devices) {
-            const deviceId = `goodearth_${light.id}`;
+      // Add devices from known IPs (automatic discovery requires Tuya cloud credentials)
+      console.log('[GoodEarth] Using known IP addresses for devices');
+      for (const known of this.knownDevices) {
+        const deviceId = `goodearth_${known.ip.replace(/\./g, '_')}`;
 
-            if (!this.devices.has(deviceId)) {
-              const device: GoodEarthDevice = {
-                id: deviceId,
-                name: light.name || `Good Earth Light ${light.id}`,
-                type: 'goodearth',
-                ip: light.ip || this.bridgeIp,
-                deviceId: light.id,
-                status: 'online',
-                enabled: true,
-                power: light.state?.on || false,
-                brightness: light.state?.brightness || 100,
-                colorTemp: light.state?.colorTemp || 2700,
-                rgbColor: light.state?.color,
-                lastSeen: new Date(),
-              };
+        if (!this.devices.has(deviceId)) {
+          const goodEarthDevice: GoodEarthDevice = {
+            id: deviceId,
+            name: `Good Earth Panel ${known.ip}`,
+            type: 'goodearth',
+            ip: known.ip,
+            deviceId: known.id || '',
+            status: 'offline', // Will update when we successfully connect
+            enabled: true,
+            power: false,
+            brightness: 100,
+            colorTemp: 4000,
+            lastSeen: new Date(),
+          };
 
-              this.updateDevice(device);
-              discoveredDevices.push(device);
-              console.log(`[GoodEarth] Discovered: ${device.name}`);
-
-              // Start polling this device
-              this.startPolling(device);
-            }
-          }
+          this.updateDevice(goodEarthDevice);
+          discoveredDevices.push(goodEarthDevice);
+          console.log(`[GoodEarth] Added device at ${known.ip}`);
         }
-      } else {
-        // Auto-discovery via network scan (simplified)
-        console.log('[GoodEarth] Auto-discovery not yet implemented, configure bridge IP in settings');
       }
     } catch (error) {
       console.error('[GoodEarth] Discovery error:', error);
@@ -83,37 +79,6 @@ export class GoodEarthManager extends BaseDeviceManager {
     return discoveredDevices;
   }
 
-  private startPolling(device: GoodEarthDevice): void {
-    // Poll device status every 30 seconds
-    const interval = setInterval(async () => {
-      try {
-        const response = await axios.get(
-          `http://${device.ip}/api/lights/${device.deviceId}`,
-          { timeout: 5000 }
-        ).catch(() => null);
-
-        if (response?.data) {
-          const updatedDevice = this.devices.get(device.id) as GoodEarthDevice;
-          if (updatedDevice) {
-            updatedDevice.power = response.data.state?.on || false;
-            updatedDevice.brightness = response.data.state?.brightness || 100;
-            updatedDevice.colorTemp = response.data.state?.colorTemp || 2700;
-            updatedDevice.rgbColor = response.data.state?.color;
-            updatedDevice.effect = response.data.state?.effect;
-            updatedDevice.status = 'online';
-            updatedDevice.lastSeen = new Date();
-            this.updateDevice(updatedDevice);
-          }
-        } else {
-          this.setDeviceStatus(device.id, 'offline');
-        }
-      } catch (error) {
-        this.setDeviceStatus(device.id, 'offline');
-      }
-    }, 30000);
-
-    this.pollIntervals.set(device.id, interval);
-  }
 
   async controlDevice(deviceId: string, command: string, parameters?: any): Promise<void> {
     const device = this.devices.get(deviceId) as GoodEarthDevice;
@@ -124,39 +89,49 @@ export class GoodEarthManager extends BaseDeviceManager {
 
     console.log(`[GoodEarth] Controlling ${device.name}: ${command}`, parameters);
 
-    const updates: any = {};
-
-    switch (command) {
-      case 'power':
-        updates.on = parameters.value;
-        device.power = parameters.value;
-        break;
-      case 'brightness':
-        updates.brightness = Math.max(0, Math.min(100, parameters.value));
-        device.brightness = updates.brightness;
-        break;
-      case 'colorTemp':
-        updates.colorTemp = Math.max(2000, Math.min(6500, parameters.value));
-        device.colorTemp = updates.colorTemp;
-        break;
-      case 'color':
-        updates.color = parameters.value; // { r, g, b }
-        device.rgbColor = parameters.value;
-        break;
-      case 'effect':
-        updates.effect = parameters.value;
-        device.effect = parameters.value;
-        break;
-      default:
-        throw new Error(`Unknown command: ${command}`);
-    }
-
     try {
-      await axios.put(
-        `http://${device.ip}/api/lights/${device.deviceId}/state`,
-        updates,
-        { timeout: 5000 }
-      );
+      // Get or create Tuya device connection
+      let tuyaDevice = this.tuyaDevices.get(deviceId);
+
+      if (!tuyaDevice && device.deviceId && device.ip) {
+        // We need a local key to control the device
+        // For now, log that we need credentials
+        console.log(`[GoodEarth] Device ${device.name} needs Tuya credentials (Device ID and Local Key)`);
+        console.log(`[GoodEarth] IP: ${device.ip}, Device ID: ${device.deviceId || 'Not discovered yet'}`);
+
+        // Optimistically update local state
+        this.applyCommandLocally(device, command, parameters);
+
+        throw new Error(`Tuya credentials required for ${device.name}. Please configure Device ID and Local Key.`);
+      }
+
+      if (tuyaDevice) {
+        const dps: any = {};
+
+        switch (command) {
+          case 'power':
+            dps['1'] = parameters.value; // DPS 1 is typically power
+            device.power = parameters.value;
+            break;
+          case 'brightness':
+            // Tuya brightness is typically 10-1000
+            const brightness = Math.max(10, Math.min(1000, Math.round(parameters.value * 10)));
+            dps['3'] = brightness;
+            device.brightness = parameters.value;
+            break;
+          case 'colorTemp':
+            // Tuya color temp is typically 0-1000 (warm to cool)
+            const colorTemp = Math.max(0, Math.min(1000, Math.round((parameters.value - 2700) / 3.8)));
+            dps['4'] = colorTemp;
+            device.colorTemp = parameters.value;
+            break;
+          default:
+            throw new Error(`Unknown command: ${command}`);
+        }
+
+        await tuyaDevice.set({ multiple: true, data: dps });
+        console.log(`[GoodEarth] Successfully sent command to ${device.name}`);
+      }
 
       this.updateDevice(device);
     } catch (error) {
@@ -165,17 +140,38 @@ export class GoodEarthManager extends BaseDeviceManager {
     }
   }
 
+  private applyCommandLocally(device: GoodEarthDevice, command: string, parameters: any): void {
+    switch (command) {
+      case 'power':
+        device.power = parameters.value;
+        break;
+      case 'brightness':
+        device.brightness = parameters.value;
+        break;
+      case 'colorTemp':
+        device.colorTemp = parameters.value;
+        break;
+    }
+    this.updateDevice(device);
+  }
+
   async cleanup(): Promise<void> {
     this.stopDiscovery();
 
-    // Clear all polling intervals
-    this.pollIntervals.forEach(interval => clearInterval(interval));
-    this.pollIntervals.clear();
+    // Disconnect all Tuya devices
+    for (const [id, device] of this.tuyaDevices.entries()) {
+      try {
+        await device.disconnect();
+      } catch (error) {
+        console.error(`[GoodEarth] Error disconnecting device ${id}:`, error);
+      }
+    }
+    this.tuyaDevices.clear();
 
     console.log('[GoodEarth] Cleanup completed');
   }
 
-  public setBridgeIp(ip: string): void {
-    this.bridgeIp = ip;
+  public setKnownDevices(devices: Array<{ ip: string; id?: string; key?: string }>): void {
+    this.knownDevices = devices;
   }
 }

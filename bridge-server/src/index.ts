@@ -12,6 +12,7 @@ import { WeatherService } from './services/WeatherService.js';
 import { ScenarioManager } from './scenarios/ScenarioManager.js';
 import { Device, AutomationRule, Scenario, SystemCoordination } from './types.js';
 
+
 class IceNetControlServer {
   private app = express();
   private server = createServer(this.app);
@@ -237,9 +238,9 @@ class IceNetControlServer {
       });
     }
 
-    // Good Earth Lighting
+    // Good Earth Lighting (Tuya)
     if (config.devices.goodearth.enabled) {
-      this.goodEarthManager = new GoodEarthManager(config.devices.goodearth.bridgeIp);
+      this.goodEarthManager = new GoodEarthManager();
       this.goodEarthManager.setDatabase(this.database);
       this.goodEarthManager.on('device_update', (device) => {
         this.wsManager.broadcast({

@@ -1,8 +1,9 @@
 import { useState } from 'react';
 import { useStore } from '../store';
-import { Device, GreeDevice, KasaDevice } from '../types';
+import { Device, GreeDevice, KasaDevice, GoodEarthDevice } from '../types';
 import GreeControl from '../components/GreeControl';
 import KasaControl from '../components/KasaControl';
+import GoodEarthControl from '../components/GoodEarthControl';
 
 const Devices = () => {
   const { devices } = useStore();
@@ -70,6 +71,9 @@ const Devices = () => {
               )}
               {device.type === 'kasa' && (
                 <KasaControl device={device as KasaDevice} />
+              )}
+              {device.type === 'goodearth' && (
+                <GoodEarthControl device={device as GoodEarthDevice} />
               )}
             </div>
           ))}

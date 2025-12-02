@@ -10,6 +10,7 @@
     "start": "node dist/index.js"
   },
   "dependencies": {
+    "@tuyapi/cli": "^1.18.3",
     "@types/cors": "^2.8.19",
     "axios": "^1.7.7",
     "cors": "^2.8.5",
@@ -17,6 +18,7 @@
     "gree-hvac-client": "^1.2.0",
     "node-cron": "^3.0.3",
     "tplink-smarthome-api": "^5.0.0",
+    "tuyapi": "^7.7.1",
     "ws": "^8.18.0"
   },
   "devDependencies": {

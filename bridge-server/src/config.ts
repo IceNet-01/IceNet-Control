@@ -23,7 +23,7 @@ const DEFAULT_CONFIG: BridgeConfig = {
       scanInterval: 60,
     },
     goodearth: {
-      enabled: false,
+      enabled: true,
       scanInterval: 60,
     },
   },
@@ -41,15 +41,20 @@ export class ConfigManager {
   }
 
   private loadConfig(): BridgeConfig {
+    console.log('[Config] Looking for config at:', CONFIG_PATH);
+    console.log('[Config] Config file exists:', existsSync(CONFIG_PATH));
     if (existsSync(CONFIG_PATH)) {
       try {
         const data = readFileSync(CONFIG_PATH, 'utf-8');
-        return { ...DEFAULT_CONFIG, ...JSON.parse(data) };
+        const loaded = { ...DEFAULT_CONFIG, ...JSON.parse(data) };
+        console.log('[Config] Loaded config from file. Good Earth enabled:', loaded.devices.goodearth.enabled);
+        return loaded;
       } catch (error) {
         console.error('Error loading config, using defaults:', error);
         return DEFAULT_CONFIG;
       }
     }
+    console.log('[Config] No config file found, using defaults. Good Earth enabled:', DEFAULT_CONFIG.devices.goodearth.enabled);
     return DEFAULT_CONFIG;
   }
 
