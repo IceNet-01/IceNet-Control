@@ -114,11 +114,27 @@ export class GreeManager extends BaseDeviceManager {
       client.on('update', (updatedProperties: any, properties: any) => {
         const device = this.devices.get(deviceId) as GreeDevice;
         if (device) {
+          // Log all properties for debugging
+          console.log(`[Gree] Device ${deviceId} update - All properties:`, JSON.stringify(properties, null, 2));
+
           // Update device state from properties
           if ('power' in properties) device.power = properties.power === 'on';
           if ('mode' in properties) device.mode = this.mapMode(properties.mode);
-          if ('temperature' in properties) device.temperature = properties.temperature;
-          if ('currentTemperature' in properties) device.currentTemperature = properties.currentTemperature;
+
+          // Convert set temperature from Celsius to Fahrenheit
+          if ('temperature' in properties) {
+            const tempC = properties.temperature;
+            device.temperature = Math.round((tempC * 9/5) + 32);
+            console.log(`[Gree] Set temperature conversion: ${tempC}°C = ${device.temperature}°F`);
+          }
+
+          // Convert currentTemperature from Celsius to Fahrenheit
+          if ('currentTemperature' in properties) {
+            const tempC = properties.currentTemperature;
+            device.currentTemperature = Math.round((tempC * 9/5) + 32);
+            console.log(`[Gree] Current temperature conversion: ${tempC}°C = ${device.currentTemperature}°F`);
+          }
+
           if ('fanSpeed' in properties) device.fanSpeed = this.mapFanSpeed(properties.fanSpeed);
           if ('swingVert' in properties) device.swingMode = this.mapSwingMode(properties.swingVert);
           if ('turbo' in properties) device.turbo = properties.turbo === 'on';
@@ -171,7 +187,11 @@ export class GreeManager extends BaseDeviceManager {
         updates.power = parameters.value ? 'on' : 'off';
         break;
       case 'temperature':
-        updates.temperature = parameters.value;
+        // Convert from Fahrenheit to Celsius for the device
+        const tempF = parameters.value;
+        const tempC = Math.round((tempF - 32) * 5/9);
+        updates.temperature = tempC;
+        console.log(`[Gree] Temperature command conversion: ${tempF}°F = ${tempC}°C`);
         break;
       case 'mode':
         updates.mode = parameters.value;
@@ -195,7 +215,47 @@ export class GreeManager extends BaseDeviceManager {
         throw new Error(`Unknown command: ${command}`);
     }
 
-    await client.setProperty(updates);
+    console.log(`[Gree] Sending updates to device:`, updates);
+
+    try {
+      await client.setProperties(updates);
+      console.log(`[Gree] Successfully sent command to ${device.name}`);
+
+      // Optimistically update the device state locally
+      switch (command) {
+        case 'power':
+          device.power = parameters.value;
+          break;
+        case 'temperature':
+          device.temperature = parameters.value;
+          break;
+        case 'mode':
+          device.mode = parameters.value;
+          break;
+        case 'fanSpeed':
+          device.fanSpeed = parameters.value;
+          break;
+        case 'swingMode':
+          device.swingMode = parameters.value;
+          break;
+        case 'turbo':
+          device.turbo = parameters.value;
+          break;
+        case 'quiet':
+          device.quiet = parameters.value;
+          break;
+        case 'light':
+          device.light = parameters.value;
+          break;
+      }
+
+      device.lastSeen = new Date();
+      this.updateDevice(device);
+      console.log(`[Gree] Device state updated locally and broadcast to clients`);
+    } catch (error) {
+      console.error(`[Gree] Error sending command to ${device.name}:`, error);
+      throw error;
+    }
   }
 
   async cleanup(): Promise<void> {

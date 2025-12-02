@@ -10,18 +10,20 @@
     "start": "node dist/index.js"
   },
   "dependencies": {
-    "express": "^4.19.2",
-    "ws": "^8.18.0",
-    "node-cron": "^3.0.3",
+    "@types/cors": "^2.8.19",
     "axios": "^1.7.7",
+    "cors": "^2.8.5",
+    "express": "^4.19.2",
     "gree-hvac-client": "^1.2.0",
-    "tplink-smarthome-api": "^5.0.0"
+    "node-cron": "^3.0.3",
+    "tplink-smarthome-api": "^5.0.0",
+    "ws": "^8.18.0"
   },
   "devDependencies": {
     "@types/express": "^4.17.21",
-    "@types/ws": "^8.5.12",
     "@types/node": "^20.16.5",
     "@types/node-cron": "^3.0.11",
+    "@types/ws": "^8.5.12",
     "tsx": "^4.19.0",
     "typescript": "^5.5.4"
   }

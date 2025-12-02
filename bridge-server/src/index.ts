@@ -1,4 +1,5 @@
 import express from 'express';
+import cors from 'cors';
 import { createServer } from 'http';
 import { ConfigManager } from './config.js';
 import { WebSocketManager } from './websocket.js';
@@ -53,6 +54,8 @@ class IceNetControlServer {
   }
 
   private setupExpress(): void {
+    // Enable CORS for all routes
+    this.app.use(cors());
     this.app.use(express.json());
     this.app.use(express.static('dist'));
 
