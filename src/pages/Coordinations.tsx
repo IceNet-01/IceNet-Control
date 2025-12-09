@@ -422,13 +422,15 @@ const Coordinations = () => {
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-300 mb-2">Value *</label>
+                <label className="block text-sm font-medium text-gray-300 mb-2">
+                  Value * {formData.source === 'weather' && formData.field === 'temperature' && '(°F)'}
+                </label>
                 <input
                   type="text"
                   value={formData.value}
                   onChange={(e) => setFormData({ ...formData, value: e.target.value })}
                   className="w-full bg-gray-700 border border-gray-600 rounded px-3 py-2 text-white"
-                  placeholder="e.g., 10"
+                  placeholder={formData.source === 'weather' && formData.field === 'temperature' ? 'e.g., 10 (Fahrenheit)' : 'e.g., 10'}
                 />
               </div>
             </div>
@@ -652,7 +654,10 @@ const Coordinations = () => {
                         <span className="text-primary-400">{coordination.thresholds[0].condition.source}</span>
                         <span className="text-gray-300 mx-1">{coordination.thresholds[0].condition.field}</span>
                         <span className="text-yellow-400 mx-1">{coordination.thresholds[0].condition.operator}</span>
-                        <span className="text-white font-semibold">{coordination.thresholds[0].condition.value}</span>
+                        <span className="text-white font-semibold">
+                          {coordination.thresholds[0].condition.value}
+                          {coordination.thresholds[0].condition.source === 'weather' && coordination.thresholds[0].condition.field === 'temperature' && '°F'}
+                        </span>
                       </div>
                       <div className="ml-12 space-y-1">
                         <div className="text-xs text-gray-400 mb-1">Turn ON:</div>
@@ -689,7 +694,10 @@ const Coordinations = () => {
                         <span className="text-primary-400">{coordination.thresholds[1].condition.source}</span>
                         <span className="text-gray-300 mx-1">{coordination.thresholds[1].condition.field}</span>
                         <span className="text-yellow-400 mx-1">{coordination.thresholds[1].condition.operator}</span>
-                        <span className="text-white font-semibold">{coordination.thresholds[1].condition.value}</span>
+                        <span className="text-white font-semibold">
+                          {coordination.thresholds[1].condition.value}
+                          {coordination.thresholds[1].condition.source === 'weather' && coordination.thresholds[1].condition.field === 'temperature' && '°F'}
+                        </span>
                       </div>
                       <div className="ml-12 space-y-1">
                         <div className="text-xs text-gray-400 mb-1">Turn ON:</div>
@@ -739,7 +747,10 @@ const Coordinations = () => {
                           <span className="text-primary-400">{threshold.condition.source}</span>
                           <span className="text-gray-300 mx-1">{threshold.condition.field}</span>
                           <span className="text-yellow-400 mx-1">{threshold.condition.operator}</span>
-                          <span className="text-white font-semibold">{threshold.condition.value}</span>
+                          <span className="text-white font-semibold">
+                            {threshold.condition.value}
+                            {threshold.condition.source === 'weather' && threshold.condition.field === 'temperature' && '°F'}
+                          </span>
                         </div>
                         <div className="ml-12 space-y-1">
                           {threshold.actions.length > 0 && (
