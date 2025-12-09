@@ -127,6 +127,21 @@ const Coordinations = () => {
     }
   };
 
+  // Helper function to get friendly field name
+  const getFriendlyFieldName = (source: string, field: string) => {
+    if (source === 'weather') {
+      switch (field) {
+        case 'temperature': return 'Temperature';
+        case 'windChill': return 'Wind Chill';
+        case 'humidity': return 'Humidity';
+        case 'pressure': return 'Pressure';
+        case 'windSpeed': return 'Wind Speed';
+        default: return field;
+      }
+    }
+    return field;
+  };
+
   // Helper function to create device-specific actions
   const createDeviceAction = (deviceId: string, turnOn: boolean) => {
     const device = devices.find(d => d.id === deviceId);
@@ -394,13 +409,27 @@ const Coordinations = () => {
 
               <div>
                 <label className="block text-sm font-medium text-gray-300 mb-2">Field</label>
-                <input
-                  type="text"
-                  value={formData.field}
-                  onChange={(e) => setFormData({ ...formData, field: e.target.value })}
-                  className="w-full bg-gray-700 border border-gray-600 rounded px-3 py-2 text-white"
-                  placeholder="e.g., temperature"
-                />
+                {formData.source === 'weather' ? (
+                  <select
+                    value={formData.field}
+                    onChange={(e) => setFormData({ ...formData, field: e.target.value })}
+                    className="w-full bg-gray-700 border border-gray-600 rounded px-3 py-2 text-white"
+                  >
+                    <option value="temperature">Temperature (Actual Air Temp)</option>
+                    <option value="windChill">Wind Chill (Feels Like)</option>
+                    <option value="humidity">Humidity</option>
+                    <option value="pressure">Pressure</option>
+                    <option value="windSpeed">Wind Speed</option>
+                  </select>
+                ) : (
+                  <input
+                    type="text"
+                    value={formData.field}
+                    onChange={(e) => setFormData({ ...formData, field: e.target.value })}
+                    className="w-full bg-gray-700 border border-gray-600 rounded px-3 py-2 text-white"
+                    placeholder="e.g., temperature"
+                  />
+                )}
               </div>
             </div>
 
@@ -423,14 +452,14 @@ const Coordinations = () => {
 
               <div>
                 <label className="block text-sm font-medium text-gray-300 mb-2">
-                  Value * {formData.source === 'weather' && formData.field === 'temperature' && '(°F)'}
+                  Value * {formData.source === 'weather' && (formData.field === 'temperature' || formData.field === 'windChill') && '(°F)'}
                 </label>
                 <input
                   type="text"
                   value={formData.value}
                   onChange={(e) => setFormData({ ...formData, value: e.target.value })}
                   className="w-full bg-gray-700 border border-gray-600 rounded px-3 py-2 text-white"
-                  placeholder={formData.source === 'weather' && formData.field === 'temperature' ? 'e.g., 10 (Fahrenheit)' : 'e.g., 10'}
+                  placeholder={formData.source === 'weather' && (formData.field === 'temperature' || formData.field === 'windChill') ? 'e.g., 10 (Fahrenheit)' : 'e.g., 10'}
                 />
               </div>
             </div>
@@ -567,7 +596,7 @@ const Coordinations = () => {
       <div className="card">
         <h2 className="text-xl font-semibold text-white mb-4">Device Synergy & Handoff</h2>
         <p className="text-gray-400 mb-4">
-          System coordinations enable intelligent device synergy. Based on conditions (like temperature),
+          System coordinations enable intelligent device synergy. Based on conditions (like temperature or wind chill),
           one device takes over while others are automatically shut down.
         </p>
         <div className="bg-gray-700 p-4 rounded-md">
@@ -579,6 +608,13 @@ const Coordinations = () => {
             <div className="mt-2"><span className="text-primary-400">IF</span> outside temp &lt; 65°F</div>
             <div className="pl-4"><span className="text-green-400">ACTIVATE</span> Heat Pump</div>
             <div className="pl-4"><span className="text-red-400">DEACTIVATE</span> Primary AC System</div>
+          </div>
+        </div>
+        <div className="mt-4 bg-blue-500/10 border border-blue-500/30 rounded-lg p-3">
+          <div className="text-sm font-semibold text-blue-400 mb-1">Temperature Options:</div>
+          <div className="text-gray-300 text-xs space-y-1">
+            <div><strong>Temperature (Actual Air Temp)</strong> - Use the actual measured air temperature</div>
+            <div><strong>Wind Chill (Feels Like)</strong> - Use the perceived temperature based on wind speed and air temp</div>
           </div>
         </div>
       </div>
@@ -652,11 +688,11 @@ const Coordinations = () => {
                       <div className="flex items-center mb-2">
                         <span className="text-xs font-semibold text-gray-400 uppercase mr-2">When</span>
                         <span className="text-primary-400">{coordination.thresholds[0].condition.source}</span>
-                        <span className="text-gray-300 mx-1">{coordination.thresholds[0].condition.field}</span>
+                        <span className="text-gray-300 mx-1">{getFriendlyFieldName(coordination.thresholds[0].condition.source, coordination.thresholds[0].condition.field)}</span>
                         <span className="text-yellow-400 mx-1">{coordination.thresholds[0].condition.operator}</span>
                         <span className="text-white font-semibold">
                           {coordination.thresholds[0].condition.value}
-                          {coordination.thresholds[0].condition.source === 'weather' && coordination.thresholds[0].condition.field === 'temperature' && '°F'}
+                          {coordination.thresholds[0].condition.source === 'weather' && (coordination.thresholds[0].condition.field === 'temperature' || coordination.thresholds[0].condition.field === 'windChill') && '°F'}
                         </span>
                       </div>
                       <div className="ml-12 space-y-1">
@@ -692,11 +728,11 @@ const Coordinations = () => {
                       <div className="flex items-center mb-2">
                         <span className="text-xs font-semibold text-gray-400 uppercase mr-2">When</span>
                         <span className="text-primary-400">{coordination.thresholds[1].condition.source}</span>
-                        <span className="text-gray-300 mx-1">{coordination.thresholds[1].condition.field}</span>
+                        <span className="text-gray-300 mx-1">{getFriendlyFieldName(coordination.thresholds[1].condition.source, coordination.thresholds[1].condition.field)}</span>
                         <span className="text-yellow-400 mx-1">{coordination.thresholds[1].condition.operator}</span>
                         <span className="text-white font-semibold">
                           {coordination.thresholds[1].condition.value}
-                          {coordination.thresholds[1].condition.source === 'weather' && coordination.thresholds[1].condition.field === 'temperature' && '°F'}
+                          {coordination.thresholds[1].condition.source === 'weather' && (coordination.thresholds[1].condition.field === 'temperature' || coordination.thresholds[1].condition.field === 'windChill') && '°F'}
                         </span>
                       </div>
                       <div className="ml-12 space-y-1">
@@ -745,11 +781,11 @@ const Coordinations = () => {
                         <div className="flex items-center mb-2">
                           <span className="text-xs font-semibold text-gray-400 uppercase mr-2">When</span>
                           <span className="text-primary-400">{threshold.condition.source}</span>
-                          <span className="text-gray-300 mx-1">{threshold.condition.field}</span>
+                          <span className="text-gray-300 mx-1">{getFriendlyFieldName(threshold.condition.source, threshold.condition.field)}</span>
                           <span className="text-yellow-400 mx-1">{threshold.condition.operator}</span>
                           <span className="text-white font-semibold">
                             {threshold.condition.value}
-                            {threshold.condition.source === 'weather' && threshold.condition.field === 'temperature' && '°F'}
+                            {threshold.condition.source === 'weather' && (threshold.condition.field === 'temperature' || threshold.condition.field === 'windChill') && '°F'}
                           </span>
                         </div>
                         <div className="ml-12 space-y-1">
