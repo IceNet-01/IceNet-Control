@@ -134,6 +134,14 @@ export interface SystemCoordination {
   }>;
 }
 
+export interface TemperatureSyncGroup {
+  id: string;
+  name: string;
+  description?: string;
+  enabled: boolean;
+  deviceIds: string[]; // Devices that should maintain the same temperature
+}
+
 export interface WeatherData {
   temperature: number;
   humidity: number;

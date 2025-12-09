@@ -15,6 +15,7 @@ const Navigation = () => {
     { path: '/automation', label: 'Automation' },
     { path: '/scenarios', label: 'Scenarios' },
     { path: '/coordinations', label: 'Synergy' },
+    { path: '/temperature-sync', label: 'Temp Sync' },
     { path: '/settings', label: 'Settings' },
   ];
 

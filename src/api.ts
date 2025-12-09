@@ -1,4 +1,4 @@
-import { Device, AutomationRule, WeatherData, Scenario, SystemCoordination, VehicleProfile, SmartSchedule, ScheduleCalculation, SchedulerLogEntry, SchedulerStats, CoordinationLogEntry, CoordinationStats } from './types';
+import { Device, AutomationRule, WeatherData, Scenario, SystemCoordination, TemperatureSyncGroup, VehicleProfile, SmartSchedule, ScheduleCalculation, SchedulerLogEntry, SchedulerStats, CoordinationLogEntry, CoordinationStats } from './types';
 
 // Config loaded from public/config.json
 let configCache: { apiUrl: string; wsUrl: string } | null = null;
@@ -184,6 +184,38 @@ export const api = {
   async deleteCoordination(coordinationId: string): Promise<void> {
     const base = await getApiBase();
     await fetch(`${base}/coordinations/${coordinationId}`, {
+      method: 'DELETE',
+    });
+  },
+
+  // Temperature Sync Groups
+  async getTemperatureSyncGroups(): Promise<TemperatureSyncGroup[]> {
+    const base = await getApiBase();
+    const res = await fetch(`${base}/temperature-sync`);
+    return res.json();
+  },
+
+  async addTemperatureSyncGroup(group: TemperatureSyncGroup): Promise<void> {
+    const base = await getApiBase();
+    await fetch(`${base}/temperature-sync`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(group),
+    });
+  },
+
+  async updateTemperatureSyncGroup(groupId: string, updates: Partial<TemperatureSyncGroup>): Promise<void> {
+    const base = await getApiBase();
+    await fetch(`${base}/temperature-sync/${groupId}`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(updates),
+    });
+  },
+
+  async deleteTemperatureSyncGroup(groupId: string): Promise<void> {
+    const base = await getApiBase();
+    await fetch(`${base}/temperature-sync/${groupId}`, {
       method: 'DELETE',
     });
   },

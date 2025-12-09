@@ -9,6 +9,7 @@ import Devices from './pages/Devices';
 import Automation from './pages/Automation';
 import Scenarios from './pages/Scenarios';
 import Coordinations from './pages/Coordinations';
+import TemperatureSync from './pages/TemperatureSync';
 import Vehicles from './pages/Vehicles';
 import SmartScheduling from './pages/SmartScheduling';
 import Settings from './pages/Settings';
@@ -57,6 +58,7 @@ function App() {
             <Route path="/automation" element={<Automation />} />
             <Route path="/scenarios" element={<Scenarios />} />
             <Route path="/coordinations" element={<Coordinations />} />
+            <Route path="/temperature-sync" element={<TemperatureSync />} />
             <Route path="/settings" element={<Settings />} />
             <Route path="*" element={<Navigate to="/" replace />} />
           </Routes>

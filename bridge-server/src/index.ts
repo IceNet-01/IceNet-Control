@@ -50,6 +50,7 @@ class IceNetControlServer {
   private automationEngine?: AutomationEngine;
   private scenarioManager?: ScenarioManager;
   private smartScheduler?: SmartScheduler;
+  private temperatureSyncManager?: TemperatureSyncManager;
 
   async init() {
     await this.database.initialize();
@@ -61,6 +62,7 @@ class IceNetControlServer {
     this.setupWeather();
     this.setupAutomation();
     this.setupSmartScheduler();
+    this.setupTemperatureSync();
   }
 
   private setupWebSocket(): void {
@@ -223,6 +225,30 @@ class IceNetControlServer {
     this.app.delete('/api/coordinations/:coordinationId', (req, res) => {
       const { coordinationId } = req.params;
       this.scenarioManager?.deleteCoordination(coordinationId);
+      res.json({ success: true });
+    });
+
+    // Temperature sync group endpoints
+    this.app.get('/api/temperature-sync', (req, res) => {
+      const groups = this.temperatureSyncManager?.getSyncGroups() || [];
+      res.json(groups);
+    });
+
+    this.app.post('/api/temperature-sync', (req, res) => {
+      const group: TemperatureSyncGroup = req.body;
+      this.temperatureSyncManager?.addSyncGroup(group);
+      res.json({ success: true });
+    });
+
+    this.app.put('/api/temperature-sync/:groupId', (req, res) => {
+      const { groupId } = req.params;
+      this.temperatureSyncManager?.updateSyncGroup(groupId, req.body);
+      res.json({ success: true });
+    });
+
+    this.app.delete('/api/temperature-sync/:groupId', (req, res) => {
+      const { groupId } = req.params;
+      this.temperatureSyncManager?.deleteSyncGroup(groupId);
       res.json({ success: true });
     });
 
@@ -738,6 +764,28 @@ class IceNetControlServer {
     console.log('[SmartScheduler] Smart scheduler initialized and started');
   }
 
+  private setupTemperatureSync(): void {
+    this.temperatureSyncManager = new TemperatureSyncManager();
+
+    // Handle temperature sync requests
+    this.temperatureSyncManager.on('sync_temperature', async (data: any) => {
+      try {
+        const { sourceDeviceId, targetDeviceId, temperature, groupName } = data;
+        console.log(`[TempSync] Syncing ${temperature}°F from ${sourceDeviceId} to ${targetDeviceId} (group: ${groupName})`);
+
+        // Set temperature on target device
+        await this.controlDevice(targetDeviceId, 'set_temperature', { value: temperature });
+
+        // Notify sync manager that sync completed
+        this.temperatureSyncManager?.notifySyncComplete(targetDeviceId, temperature);
+      } catch (error) {
+        console.error('[TempSync] Error syncing temperature:', error);
+      }
+    });
+
+    console.log('[TempSync] Temperature sync manager initialized');
+  }
+
   private getAllDevices(): Device[] {
     const devices: Device[] = [];
 
@@ -812,6 +860,11 @@ class IceNetControlServer {
       case 'unknown':
         await this.genericIoTScanner?.controlDevice(deviceId, command, parameters);
         break;
+    }
+
+    // Monitor temperature changes for temperature sync
+    if (command === 'set_temperature' && parameters?.value !== undefined) {
+      this.temperatureSyncManager?.handleTemperatureChange(deviceId, parameters.value);
     }
   }
 

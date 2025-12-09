@@ -4,7 +4,7 @@
     "name": "Heat",
     "description": "",
     "enabled": true,
-    "evaluationInterval": 1,
+    "evaluationInterval": 30,
     "thresholds": [
       {
         "condition": {
