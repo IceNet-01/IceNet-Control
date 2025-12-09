@@ -177,11 +177,78 @@ export class ScenarioManager extends EventEmitter {
   }
 
   /**
+   * Check if a device is in the expected power state
+   */
+  private isDeviceInExpectedState(device: any, shouldBeOn: boolean): boolean {
+    if (!device) return false;
+
+    // For Gree devices
+    if (device.type === 'gree') {
+      return device.power === shouldBeOn;
+    }
+
+    // For Ecobee and Home Assistant climate devices
+    if (device.type === 'ecobee' || (device.type === 'homeassistant' && device.domain === 'climate')) {
+      if (shouldBeOn) {
+        // Device should be on: check if hvacMode is not 'off'
+        return device.hvacMode !== 'off';
+      } else {
+        // Device should be off: check if hvacMode is 'off'
+        return device.hvacMode === 'off';
+      }
+    }
+
+    // For other devices with power property
+    if ('power' in device) {
+      return device.power === shouldBeOn;
+    }
+
+    return false;
+  }
+
+  /**
+   * Check if all devices in threshold match expected states
+   */
+  private areDevicesInExpectedStates(
+    threshold: any,
+    getDevice?: (deviceId: string) => any
+  ): boolean {
+    if (!getDevice) return true; // Can't verify without device getter
+
+    // Check primary device(s) - should be ON
+    const primaryActions = threshold.actions.filter(
+      (a: any) => a.parameters?.value !== false && a.parameters?.hvacMode !== 'off'
+    );
+
+    for (const action of primaryActions) {
+      const device = getDevice(action.deviceId);
+      if (!this.isDeviceInExpectedState(device, true)) {
+        console.log(`[Coordination] Device ${action.deviceId} is not ON as expected`);
+        return false;
+      }
+    }
+
+    // Check secondary device(s) - should be OFF
+    if (threshold.secondaryDeviceIds) {
+      for (const deviceId of threshold.secondaryDeviceIds) {
+        const device = getDevice(deviceId);
+        if (!this.isDeviceInExpectedState(device, false)) {
+          console.log(`[Coordination] Device ${deviceId} is not OFF as expected`);
+          return false;
+        }
+      }
+    }
+
+    return true;
+  }
+
+  /**
    * Check and execute system coordinations based on current conditions
    */
   public evaluateCoordinations(
     evaluateCondition: (condition: any) => boolean,
-    weatherData?: { temperature: number; windChill?: number }
+    weatherData?: { temperature: number; windChill?: number },
+    getDevice?: (deviceId: string) => any
   ): void {
     const now = Date.now();
 
@@ -243,11 +310,16 @@ export class ScenarioManager extends EventEmitter {
         });
 
         if (conditionMet) {
-          // Check if this threshold is already active (prevent re-triggering the same state)
+          // Check if this threshold is already active AND devices are in correct states
           const lastActiveThresholdIndex = this.lastActiveThreshold.get(coordination.id);
           if (lastActiveThresholdIndex === thresholdIndex) {
-            console.log(`[Coordination] ⏭️  "${coordination.name}" - threshold already active, no action needed`);
-            continue;
+            // Verify all devices are still in expected states
+            if (this.areDevicesInExpectedStates(threshold, getDevice)) {
+              console.log(`[Coordination] ⏭️  "${coordination.name}" - threshold already active and devices in correct state, no action needed`);
+              continue;
+            } else {
+              console.log(`[Coordination] ⚠️  "${coordination.name}" - threshold active but device(s) were manually changed, re-triggering`);
+            }
           }
 
           console.log(`[Coordination] ✅ TRIGGERING: "${coordination.name}" - ${reason}`);

@@ -685,7 +685,8 @@ class IceNetControlServer {
 
           this.scenarioManager.evaluateCoordinations(
             (condition) => this.automationEngine!.evaluateConditionExternal(condition),
-            weatherData
+            weatherData,
+            (deviceId) => this.getAllDevices().find(d => d.id === deviceId)
           );
         }
       }, config.automation.checkInterval * 1000);
