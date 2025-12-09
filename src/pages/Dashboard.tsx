@@ -42,7 +42,25 @@ const Dashboard = () => {
       {/* Weather Card */}
       {weather && (
         <div className="card">
-          <h2 className="text-xl font-semibold text-white mb-4">Weather</h2>
+          <div className="flex items-center justify-between mb-4">
+            <h2 className="text-xl font-semibold text-white">Weather</h2>
+            <div className="flex items-center gap-2">
+              {/* Status Indicator */}
+              <div className={`px-2 py-1 rounded text-xs font-medium ${
+                weather.status === 'success' ? 'bg-green-900 text-green-300' :
+                weather.status === 'error' ? 'bg-red-900 text-red-300' :
+                'bg-yellow-900 text-yellow-300'
+              }`}>
+                {weather.status === 'success' ? '✓ Live' :
+                 weather.status === 'error' ? '✗ Error' :
+                 '⚠ Stale'}
+              </div>
+              {/* Provider Badge */}
+              <div className="px-2 py-1 rounded bg-gray-700 text-gray-300 text-xs font-medium">
+                {weather.provider || 'Unknown'}
+              </div>
+            </div>
+          </div>
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
             <div>
               <div className="text-gray-400 text-sm">Temperature</div>
@@ -61,6 +79,17 @@ const Dashboard = () => {
               <div className="text-lg font-medium text-white">{weather.location || 'Unknown'}</div>
             </div>
           </div>
+          {/* Last Update Info */}
+          {weather.lastSuccessfulUpdate && (
+            <div className="mt-3 pt-3 border-t border-gray-700">
+              <div className="text-xs text-gray-400">
+                Last updated: {new Date(weather.lastSuccessfulUpdate).toLocaleString()}
+                {weather.errorMessage && (
+                  <span className="ml-2 text-red-400">({weather.errorMessage})</span>
+                )}
+              </div>
+            </div>
+          )}
         </div>
       )}
 

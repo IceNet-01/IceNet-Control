@@ -1,0 +1,30 @@
+[Unit]
+Description=IceNet Control - Smart Home Automation Server
+Documentation=https://github.com/yourusername/IceNet-Control
+After=network.target docker.service
+Requires=docker.service
+# Wait for Home Assistant container to be running
+After=docker-homeassistant.service
+
+[Service]
+Type=simple
+User=mesh
+WorkingDirectory=/home/mesh/IceNet-Control/bridge-server
+ExecStartPre=/bin/sleep 30
+ExecStart=/home/mesh/.nvm/versions/node/v24.11.1/bin/node /home/mesh/IceNet-Control/bridge-server/dist/index.js
+Restart=on-failure
+RestartSec=10
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=icenet-control
+TimeoutStartSec=180
+
+# Environment
+Environment=NODE_ENV=production
+
+# Security settings
+NoNewPrivileges=true
+PrivateTmp=true
+
+[Install]
+WantedBy=multi-user.target

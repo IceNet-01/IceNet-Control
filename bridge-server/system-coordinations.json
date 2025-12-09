@@ -1,0 +1,88 @@
+[
+  {
+    "id": "coord_1764726802921",
+    "name": "Heat",
+    "description": "",
+    "enabled": true,
+    "evaluationInterval": 30,
+    "thresholds": [
+      {
+        "condition": {
+          "source": "weather",
+          "field": "temperature",
+          "operator": ">",
+          "value": 14
+        },
+        "primaryDeviceId": "gree_10_125_0_134",
+        "secondaryDeviceIds": [
+          "ha_climate_living_room"
+        ],
+        "actions": [
+          {
+            "type": "device_control",
+            "deviceId": "gree_10_125_0_134",
+            "command": "power",
+            "parameters": {
+              "value": true
+            }
+          },
+          {
+            "type": "device_control",
+            "deviceId": "gree_10_125_0_123",
+            "command": "power",
+            "parameters": {
+              "value": true
+            }
+          },
+          {
+            "type": "device_control",
+            "deviceId": "ha_climate_living_room",
+            "command": "set",
+            "parameters": {
+              "hvacMode": "off"
+            }
+          }
+        ]
+      },
+      {
+        "condition": {
+          "source": "weather",
+          "field": "temperature",
+          "operator": "<",
+          "value": 10
+        },
+        "primaryDeviceId": "ha_climate_living_room",
+        "secondaryDeviceIds": [
+          "gree_10_125_0_134",
+          "gree_10_125_0_123"
+        ],
+        "actions": [
+          {
+            "type": "device_control",
+            "deviceId": "ha_climate_living_room",
+            "command": "set",
+            "parameters": {
+              "hvacMode": "heat"
+            }
+          },
+          {
+            "type": "device_control",
+            "deviceId": "gree_10_125_0_134",
+            "command": "power",
+            "parameters": {
+              "value": false
+            }
+          },
+          {
+            "type": "device_control",
+            "deviceId": "gree_10_125_0_123",
+            "command": "power",
+            "parameters": {
+              "value": false
+            }
+          }
+        ]
+      }
+    ]
+  }
+]

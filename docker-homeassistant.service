@@ -1,0 +1,25 @@
+[Unit]
+Description=Home Assistant Docker Container
+Documentation=https://www.home-assistant.io/
+After=docker.service network-online.target
+Requires=docker.service
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+RemainAfterExit=yes
+User=root
+ExecStartPre=-/usr/bin/docker stop homeassistant
+ExecStartPre=-/usr/bin/docker rm homeassistant
+ExecStart=/usr/bin/docker run -d \
+  --name homeassistant \
+  --restart=unless-stopped \
+  -e TZ=America/Chicago \
+  -v /home/mesh/.config/icenet/homeassistant:/config \
+  --network=host \
+  ghcr.io/home-assistant/home-assistant:stable
+ExecStop=/usr/bin/docker stop homeassistant
+TimeoutStartSec=60
+
+[Install]
+WantedBy=multi-user.target

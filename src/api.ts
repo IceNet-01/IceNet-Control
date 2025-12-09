@@ -1,4 +1,4 @@
-import { Device, AutomationRule, WeatherData, Scenario, SystemCoordination, VehicleProfile, SmartSchedule, ScheduleCalculation } from './types';
+import { Device, AutomationRule, WeatherData, Scenario, SystemCoordination, VehicleProfile, SmartSchedule, ScheduleCalculation, SchedulerLogEntry, SchedulerStats, CoordinationLogEntry, CoordinationStats } from './types';
 
 // Config loaded from public/config.json
 let configCache: { apiUrl: string; wsUrl: string } | null = null;
@@ -49,6 +49,17 @@ export const api = {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ command, parameters }),
     });
+  },
+
+  async updateDeviceName(deviceId: string, customName: string): Promise<Device> {
+    const base = await getApiBase();
+    const res = await fetch(`${base}/devices/${deviceId}/name`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ customName }),
+    });
+    const data = await res.json();
+    return data.device;
   },
 
   // Automation
@@ -245,5 +256,55 @@ export const api = {
     await fetch(`${base}/smart-schedules/${scheduleId}`, {
       method: 'DELETE',
     });
+  },
+
+  // Scheduler Activity Logs
+  async getSchedulerActivity(limit: number = 100, offset: number = 0): Promise<SchedulerLogEntry[]> {
+    const base = await getApiBase();
+    const res = await fetch(`${base}/scheduler-activity?limit=${limit}&offset=${offset}`);
+    return res.json();
+  },
+
+  async getSchedulerActivityForSchedule(scheduleId: string, limit: number = 50): Promise<SchedulerLogEntry[]> {
+    const base = await getApiBase();
+    const res = await fetch(`${base}/scheduler-activity/${scheduleId}?limit=${limit}`);
+    return res.json();
+  },
+
+  async getSchedulerStats(scheduleId: string): Promise<SchedulerStats> {
+    const base = await getApiBase();
+    const res = await fetch(`${base}/scheduler-activity/${scheduleId}/stats`);
+    return res.json();
+  },
+
+  async getLastSchedulerAction(scheduleId: string): Promise<SchedulerLogEntry | null> {
+    const base = await getApiBase();
+    const res = await fetch(`${base}/scheduler-activity/${scheduleId}/last-action`);
+    return res.json();
+  },
+
+  // Coordination Activity Log
+  async getCoordinationActivity(limit: number = 100, offset: number = 0): Promise<CoordinationLogEntry[]> {
+    const base = await getApiBase();
+    const res = await fetch(`${base}/coordination-activity?limit=${limit}&offset=${offset}`);
+    return res.json();
+  },
+
+  async getCoordinationActivityForCoordination(coordinationId: string, limit: number = 50): Promise<CoordinationLogEntry[]> {
+    const base = await getApiBase();
+    const res = await fetch(`${base}/coordination-activity/${coordinationId}?limit=${limit}`);
+    return res.json();
+  },
+
+  async getCoordinationStats(coordinationId: string): Promise<CoordinationStats> {
+    const base = await getApiBase();
+    const res = await fetch(`${base}/coordination-activity/${coordinationId}/stats`);
+    return res.json();
+  },
+
+  async getCoordinationActivityByAction(action: string, limit: number = 50): Promise<CoordinationLogEntry[]> {
+    const base = await getApiBase();
+    const res = await fetch(`${base}/coordination-activity/action/${action}?limit=${limit}`);
+    return res.json();
   },
 };

@@ -1,0 +1,47 @@
+{
+  "vehicleProfiles": {
+    "vehicle_1764888330664": {
+      "id": "vehicle_1764888330664",
+      "name": "2000 Excursion",
+      "make": "Ford",
+      "model": "Excursion",
+      "year": 2000,
+      "engineType": "gas-6cyl",
+      "engineSize": 7.3,
+      "coolantCapacity": 40,
+      "blockHeaterWattage": 800,
+      "hasEngineBlocket": false,
+      "notes": ""
+    }
+  },
+  "smartSchedules": {
+    "schedule_1764696704425": {
+      "id": "schedule_1764696704425",
+      "name": "Weekly Commute",
+      "description": "",
+      "enabled": true,
+      "deviceId": "kasa_800694AEC15BFFC881692E03300423D21A56D555",
+      "vehicleProfileId": "vehicle_1764888330664",
+      "departureTime": "06:30",
+      "daysOfWeek": [
+        1,
+        2,
+        3,
+        4,
+        5
+      ],
+      "minRuntime": 60,
+      "maxRuntime": 400,
+      "targetTemp": 120,
+      "noHeatAbove": 39,
+      "fullHeatBelow": -22,
+      "useWeatherForecast": true,
+      "accountForWindChill": true,
+      "bufferMinutes": 10,
+      "lastCalculatedRuntime": 383,
+      "nextScheduledStart": "2025-12-05T05:57:00.000Z",
+      "lastScheduledStart": "2025-12-03T06:20:00.000Z",
+      "lastExecuted": "2025-12-03T06:20:00.395Z"
+    }
+  }
+}

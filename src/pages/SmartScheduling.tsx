@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { api } from '../api';
 import { SmartSchedule, ScheduleCalculation, Device } from '../types';
 import { useStore } from '../store';
+import SchedulerActivityLog from '../components/SchedulerActivityLog';
 
 const DAYS_OF_WEEK = [
   { value: 0, label: 'Sun' },
@@ -48,10 +49,11 @@ export default function SmartScheduling() {
         api.getSmartSchedules(),
         api.getUpcomingSchedules(24),
       ]);
-      setSmartSchedules(schedules);
-      setUpcomingSchedules(upcoming);
+      setSmartSchedules(schedules || []);
+      setUpcomingSchedules(upcoming || []);
     } catch (error) {
       console.error('Failed to load smart schedules:', error);
+      // Don't clear existing data on error to prevent blank page
     }
   };
 
@@ -169,12 +171,12 @@ export default function SmartScheduling() {
       </div>
 
       {/* Upcoming Runs */}
-      {upcomingSchedules.length > 0 && (
+      {(upcomingSchedules || []).length > 0 && (
         <div className="bg-gray-800 rounded-lg p-6 border border-gray-700">
           <h2 className="text-xl font-semibold text-white mb-4">Upcoming Runs (Next 24 Hours)</h2>
           <div className="space-y-3">
-            {upcomingSchedules.map((calc) => {
-              const schedule = smartSchedules.find((s) => s.id === calc.scheduleId);
+            {(upcomingSchedules || []).map((calc) => {
+              const schedule = (smartSchedules || []).find((s) => s.id === calc.scheduleId);
               return (
                 <div key={calc.scheduleId} className="flex items-center justify-between bg-gray-700 rounded-lg p-4">
                   <div>
@@ -191,6 +193,9 @@ export default function SmartScheduling() {
           </div>
         </div>
       )}
+
+      {/* Scheduler Activity Log */}
+      <SchedulerActivityLog limit={20} />
 
       {showForm && (
         <div className="bg-gray-800 rounded-lg p-6 border border-gray-700">
@@ -403,7 +408,7 @@ export default function SmartScheduling() {
                     className="w-4 h-4 text-blue-600 bg-gray-700 border-gray-600 rounded"
                   />
                   <label htmlFor="useWeatherForecast" className="ml-2 text-sm text-gray-300">
-                    Use weather forecast (future feature)
+                    Use weather forecast at departure time
                   </label>
                 </div>
                 <div className="flex items-center">
@@ -415,7 +420,7 @@ export default function SmartScheduling() {
                     className="w-4 h-4 text-blue-600 bg-gray-700 border-gray-600 rounded"
                   />
                   <label htmlFor="accountForWindChill" className="ml-2 text-sm text-gray-300">
-                    Account for wind chill (future feature)
+                    Account for wind chill in calculations
                   </label>
                 </div>
               </div>
@@ -443,7 +448,7 @@ export default function SmartScheduling() {
       {/* Schedule List */}
       <div className="space-y-4">
         <h2 className="text-xl font-semibold text-white">All Schedules</h2>
-        {smartSchedules.map((schedule) => (
+        {(smartSchedules || []).map((schedule) => (
           <div
             key={schedule.id}
             className={`bg-gray-800 rounded-lg p-6 border ${
@@ -499,9 +504,9 @@ export default function SmartScheduling() {
               <div>
                 <span className="text-gray-400">Days:</span>
                 <p className="text-white font-medium">
-                  {schedule.daysOfWeek.length === 7
+                  {(schedule.daysOfWeek || []).length === 7
                     ? 'Every day'
-                    : schedule.daysOfWeek.map((d) => DAYS_OF_WEEK[d].label).join(', ')}
+                    : (schedule.daysOfWeek || []).map((d) => DAYS_OF_WEEK[d]?.label || '?').join(', ')}
                 </p>
               </div>
               <div>
@@ -531,7 +536,7 @@ export default function SmartScheduling() {
         ))}
       </div>
 
-      {smartSchedules.length === 0 && !showForm && (
+      {(smartSchedules || []).length === 0 && !showForm && (
         <div className="text-center py-12 text-gray-400">
           <p className="text-lg mb-2">No schedules configured</p>
           <p className="text-sm">Add your first schedule to start automating your block heater</p>

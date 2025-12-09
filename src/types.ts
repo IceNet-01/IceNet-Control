@@ -48,7 +48,21 @@ export interface GoodEarthDevice extends BaseDevice {
   effect?: string;
 }
 
-export type Device = GreeDevice | KasaDevice | GoodEarthDevice;
+export interface JackeryDevice extends BaseDevice {
+  type: 'jackery';
+  ip?: string;
+  model?: string;
+  cloudDeviceId?: string;
+  batteryLevel: number;
+  batteryCapacity?: number;
+  batteryTemp?: number;
+  inputPower: number;
+  outputPower: number;
+  acOutputEnabled?: boolean;
+  dcOutputEnabled?: boolean;
+}
+
+export type Device = GreeDevice | KasaDevice | GoodEarthDevice | JackeryDevice | EcobeeDevice | HomeAssistantDevice;
 
 export type ConditionOperator = 'eq' | 'ne' | 'gt' | 'gte' | 'lt' | 'lte';
 
@@ -111,6 +125,7 @@ export interface SystemCoordination {
   name: string;
   description?: string;
   enabled: boolean;
+  evaluationInterval?: number; // Minutes between evaluations (default: 30)
   thresholds: Array<{
     condition: Condition;
     primaryDeviceId: string;
@@ -126,6 +141,15 @@ export interface WeatherData {
   conditions: string;
   timestamp: Date;
   location?: string;
+  windSpeed?: number;
+  windDirection?: string;
+  windChill?: number;
+
+  // Status tracking
+  status: 'success' | 'error' | 'stale';
+  provider: string;
+  lastSuccessfulUpdate?: Date;
+  errorMessage?: string;
 }
 
 // Smart Scheduling Types
@@ -175,4 +199,55 @@ export interface ScheduleCalculation {
   departureTime: Date;
   ambientTemp: number;
   reason: string;
+}
+
+export interface SchedulerLogEntry {
+  id: number;
+  timestamp: Date;
+  scheduleId: string;
+  scheduleName: string;
+  deviceId: string;
+  deviceName: string;
+  action: 'evaluate' | 'trigger_on' | 'trigger_off' | 'skip';
+  temperature: number;
+  windChill?: number;
+  runtimeMinutes?: number;
+  startTime?: Date;
+  departureTime?: Date;
+  reason: string;
+  metadata?: string;
+}
+
+export interface SchedulerStats {
+  totalEvaluations: number;
+  totalTriggers: number;
+  totalSkips: number;
+  avgRuntime: number;
+  lastAction: SchedulerLogEntry | null;
+}
+
+export interface CoordinationLogEntry {
+  id: number;
+  timestamp: Date;
+  coordinationId: string;
+  coordinationName: string;
+  action: 'evaluate' | 'trigger' | 'skip';
+  conditionMet: boolean;
+  temperature?: number;
+  windChill?: number;
+  conditionField: string;
+  conditionOperator: string;
+  conditionValue: any;
+  primaryDeviceId?: string;
+  primaryDeviceName?: string;
+  secondaryDeviceIds?: string;
+  actionsExecuted?: string;
+  reason: string;
+}
+
+export interface CoordinationStats {
+  totalEvaluations: number;
+  totalTriggers: number;
+  totalSkips: number;
+  lastTrigger: CoordinationLogEntry | null;
 }

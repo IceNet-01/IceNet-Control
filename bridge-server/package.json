@@ -10,9 +10,11 @@
     "start": "node dist/index.js"
   },
   "dependencies": {
+    "@jope-io/ecobee": "^0.1.4",
     "@tuyapi/cli": "^1.18.3",
     "@types/cors": "^2.8.19",
     "axios": "^1.7.7",
+    "better-sqlite3": "^12.5.0",
     "cors": "^2.8.5",
     "express": "^4.19.2",
     "gree-hvac-client": "^1.2.0",
@@ -22,6 +24,7 @@
     "ws": "^8.18.0"
   },
   "devDependencies": {
+    "@types/better-sqlite3": "^7.6.13",
     "@types/express": "^4.17.21",
     "@types/node": "^20.16.5",
     "@types/node-cron": "^3.0.11",

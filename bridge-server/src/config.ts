@@ -26,6 +26,26 @@ const DEFAULT_CONFIG: BridgeConfig = {
       enabled: true,
       scanInterval: 60,
     },
+    ecobee: {
+      enabled: false,
+      refreshInterval: 60,
+    },
+    homeassistant: {
+      enabled: false,
+      refreshInterval: 300,
+    },
+    ecoflow: {
+      enabled: false,
+      scanInterval: 60,
+    },
+    jackery: {
+      enabled: false,
+      scanInterval: 300,
+    },
+    genericiot: {
+      enabled: false,
+      scanInterval: 300,
+    },
   },
   automation: {
     enabled: true,

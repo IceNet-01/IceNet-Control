@@ -9,6 +9,7 @@
 import { EventEmitter } from 'events';
 import { SmartSchedule, VehicleProfile, EngineType, WeatherData } from '../types';
 import { WeatherService } from '../services/WeatherService';
+import { SchedulerActivityLog } from '../database/SchedulerActivityLog.js';
 
 interface ScheduleCalculation {
   scheduleId: string;
@@ -16,6 +17,7 @@ interface ScheduleCalculation {
   startTime: Date;
   departureTime: Date;
   ambientTemp: number;
+  windChill?: number;
   reason: string;
 }
 
@@ -23,12 +25,22 @@ export class SmartScheduler extends EventEmitter {
   private schedules: Map<string, SmartSchedule> = new Map();
   private vehicleProfiles: Map<string, VehicleProfile> = new Map();
   private weatherService: WeatherService;
+  private activityLog: SchedulerActivityLog;
   private checkInterval: NodeJS.Timeout | null = null;
   private readonly CHECK_INTERVAL_MS = 60000; // Check every minute
+  private deviceNameCache: Map<string, string> = new Map();
 
-  constructor(weatherService: WeatherService) {
+  constructor(weatherService: WeatherService, activityLog: SchedulerActivityLog) {
     super();
     this.weatherService = weatherService;
+    this.activityLog = activityLog;
+  }
+
+  /**
+   * Set device name for logging (called from main server)
+   */
+  setDeviceName(deviceId: string, deviceName: string): void {
+    this.deviceNameCache.set(deviceId, deviceName);
   }
 
   /**
@@ -262,11 +274,17 @@ export class SmartScheduler extends EventEmitter {
     // Get temperature (use forecast if enabled and available)
     let ambientTemp: number;
     const weatherData = this.weatherService.getWeather();
+    const departureTime = this.getDepartureTime(schedule, now);
 
-    if (schedule.useWeatherForecast && weatherData) {
-      // TODO: Implement forecast lookup for departure time
-      // For now, use current temperature
-      ambientTemp = weatherData.temperature;
+    if (schedule.useWeatherForecast && weatherData?.forecast && weatherData.forecast.length > 0) {
+      // Use forecast temperature at departure time
+      const forecastTemp = this.getForecastTemperature(weatherData.forecast, departureTime);
+      if (forecastTemp !== null) {
+        ambientTemp = forecastTemp;
+        console.log(`[SmartScheduler] Using forecast temp for ${schedule.name}: ${forecastTemp.toFixed(1)}°F at ${departureTime.toLocaleTimeString()}`);
+      } else {
+        ambientTemp = weatherData.temperature;
+      }
     } else if (weatherData) {
       ambientTemp = weatherData.temperature;
     } else {
@@ -274,10 +292,21 @@ export class SmartScheduler extends EventEmitter {
       ambientTemp = 20; // Conservative default (assume it's cold)
     }
 
-    // TODO: Account for wind chill if enabled
-    // if (schedule.accountForWindChill && weatherData?.windSpeed) {
-    //   ambientTemp = this.calculateWindChill(ambientTemp, weatherData.windSpeed);
-    // }
+    // Account for wind chill if enabled
+    let windChill: number | undefined;
+    if (schedule.accountForWindChill && weatherData) {
+      if (weatherData.windChill !== undefined) {
+        // Use pre-calculated wind chill from weather service
+        windChill = weatherData.windChill;
+        ambientTemp = windChill;
+        console.log(`[SmartScheduler] Using wind chill for ${schedule.name}: ${windChill.toFixed(1)}°F (actual: ${weatherData.temperature.toFixed(1)}°F, wind: ${weatherData.windSpeed || 0} mph)`);
+      } else if (weatherData.windSpeed !== undefined && weatherData.windSpeed > 3) {
+        // Calculate wind chill ourselves if wind speed > 3 mph
+        windChill = this.calculateWindChill(ambientTemp, weatherData.windSpeed);
+        console.log(`[SmartScheduler] Calculated wind chill for ${schedule.name}: ${windChill.toFixed(1)}°F (actual: ${ambientTemp.toFixed(1)}°F, wind: ${weatherData.windSpeed} mph)`);
+        ambientTemp = windChill;
+      }
+    }
 
     // Get vehicle profile if specified
     const vehicleProfile = schedule.vehicleProfileId
@@ -292,15 +321,15 @@ export class SmartScheduler extends EventEmitter {
         scheduleId: schedule.id,
         runtimeMinutes: 0,
         startTime: now,
-        departureTime: this.getDepartureTime(schedule, now),
+        departureTime: departureTime,
         ambientTemp,
+        windChill,
         reason: `Temperature ${ambientTemp.toFixed(1)}°F is above threshold ${schedule.noHeatAbove}°F - no heating needed`,
       };
     }
 
     // Calculate start time
     const startTime = this.calculateStartTime(schedule, runtimeMinutes, now);
-    const departureTime = this.getDepartureTime(schedule, now);
 
     return {
       scheduleId: schedule.id,
@@ -308,6 +337,7 @@ export class SmartScheduler extends EventEmitter {
       startTime,
       departureTime,
       ambientTemp,
+      windChill,
       reason: `Temperature ${ambientTemp.toFixed(1)}°F requires ${runtimeMinutes} minutes of heating`,
     };
   }
@@ -358,20 +388,63 @@ export class SmartScheduler extends EventEmitter {
    */
   private async checkSchedules(): Promise<void> {
     const now = new Date();
+    console.log(`[SmartScheduler] === Checking ${this.schedules.size} schedules at ${now.toLocaleString()} ===`);
 
     for (const schedule of this.schedules.values()) {
-      if (!schedule.enabled) continue;
+      if (!schedule.enabled) {
+        console.log(`[SmartScheduler] ⏭️  Schedule "${schedule.name}" (${schedule.id}) is disabled`);
+        continue;
+      }
 
       try {
+        console.log(`[SmartScheduler] 🔍 Evaluating schedule "${schedule.name}" (${schedule.id})`);
         const calculation = await this.calculateSchedule(schedule.id, now);
-        if (!calculation) continue;
+
+        if (!calculation) {
+          const dayOfWeek = now.getDay();
+          const dayNames = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+          const reason = `Not scheduled for ${dayNames[dayOfWeek]} (scheduled days: ${schedule.daysOfWeek.map(d => dayNames[d]).join(', ')})`;
+
+          console.log(`[SmartScheduler] ⏭️  Skip: ${reason}`);
+
+          // Log skip
+          const weatherData = this.weatherService.getWeather();
+          this.logActivity(schedule, 'skip', weatherData?.temperature ?? 0, {
+            reason,
+            windChill: weatherData?.windChill,
+          });
+          continue;
+        }
 
         // Update schedule with latest calculation
         schedule.lastCalculatedRuntime = calculation.runtimeMinutes;
         schedule.nextScheduledStart = calculation.startTime;
 
-        // Check if we should turn ON the device
         const timeUntilStart = calculation.startTime.getTime() - now.getTime();
+        const timeUntilStartMin = Math.round(timeUntilStart / 60000);
+
+        console.log(`[SmartScheduler] 📊 Calculation results:`);
+        console.log(`  - Temperature: ${calculation.ambientTemp.toFixed(1)}°F${calculation.windChill ? ` (wind chill: ${calculation.windChill.toFixed(1)}°F)` : ''}`);
+        console.log(`  - Runtime needed: ${calculation.runtimeMinutes} minutes`);
+        console.log(`  - Start time: ${calculation.startTime.toLocaleString()}`);
+        console.log(`  - Time until start: ${timeUntilStartMin} minutes`);
+        console.log(`  - Reason: ${calculation.reason}`);
+
+        // Log evaluation
+        this.logActivity(schedule, 'evaluate', calculation.ambientTemp, {
+          reason: calculation.reason,
+          runtimeMinutes: calculation.runtimeMinutes,
+          startTime: calculation.startTime,
+          departureTime: calculation.departureTime,
+          windChill: calculation.windChill,
+          metadata: JSON.stringify({
+            timeUntilStart: timeUntilStartMin,
+            noHeatAbove: schedule.noHeatAbove,
+            fullHeatBelow: schedule.fullHeatBelow,
+          }),
+        });
+
+        // Check if we should turn ON the device
         const shouldTurnOn = timeUntilStart <= 0 && timeUntilStart > -this.CHECK_INTERVAL_MS;
 
         if (shouldTurnOn && calculation.runtimeMinutes > 0) {
@@ -379,8 +452,12 @@ export class SmartScheduler extends EventEmitter {
             ? now.getTime() - new Date(schedule.lastExecuted).getTime()
             : Infinity;
 
+          console.log(`[SmartScheduler] ⏰ Time to turn ON! Last execution: ${schedule.lastExecuted ? new Date(schedule.lastExecuted).toLocaleString() : 'never'}`);
+
           // Prevent duplicate executions (must be at least 12 hours apart)
           if (timeSinceLastExecution >= 12 * 60 * 60 * 1000) {
+            console.log(`[SmartScheduler] ✅ TRIGGERING ON for device ${schedule.deviceId} - runtime: ${calculation.runtimeMinutes} minutes`);
+
             this.emit('schedule_trigger_on', {
               scheduleId: schedule.id,
               deviceId: schedule.deviceId,
@@ -390,7 +467,23 @@ export class SmartScheduler extends EventEmitter {
 
             schedule.lastScheduledStart = calculation.startTime;
             schedule.lastExecuted = now;
+
+            // Log trigger ON
+            this.logActivity(schedule, 'trigger_on', calculation.ambientTemp, {
+              reason: `Triggered ON - runtime: ${calculation.runtimeMinutes} minutes`,
+              runtimeMinutes: calculation.runtimeMinutes,
+              startTime: calculation.startTime,
+              departureTime: calculation.departureTime,
+              windChill: calculation.windChill,
+            });
+          } else {
+            const hoursUntilNext = (12 * 60 * 60 * 1000 - timeSinceLastExecution) / (1000 * 60 * 60);
+            console.log(`[SmartScheduler] ⏸️  Duplicate prevention: Last execution was ${Math.round(timeSinceLastExecution / 3600000)} hours ago. Next trigger in ${hoursUntilNext.toFixed(1)} hours`);
           }
+        } else if (timeUntilStart > 0) {
+          console.log(`[SmartScheduler] ⏳ Waiting: ${timeUntilStartMin} minutes until start time`);
+        } else if (calculation.runtimeMinutes === 0) {
+          console.log(`[SmartScheduler] 🌡️  No heating needed: Temperature is above threshold`);
         }
 
         // Check if we should turn OFF the device
@@ -402,17 +495,62 @@ export class SmartScheduler extends EventEmitter {
           const shouldTurnOff = timeUntilOff <= 0 && timeUntilOff > -this.CHECK_INTERVAL_MS;
 
           if (shouldTurnOff) {
+            console.log(`[SmartScheduler] 🛑 TRIGGERING OFF for device ${schedule.deviceId}`);
+
             this.emit('schedule_trigger_off', {
               scheduleId: schedule.id,
               deviceId: schedule.deviceId,
               calculation,
             });
+
+            // Log trigger OFF
+            this.logActivity(schedule, 'trigger_off', calculation.ambientTemp, {
+              reason: 'Runtime completed',
+              windChill: calculation.windChill,
+            });
           }
         }
+
+        console.log(''); // Empty line for readability
       } catch (error) {
-        console.error(`[SmartScheduler] Error checking schedule ${schedule.id}:`, error);
+        console.error(`[SmartScheduler] ❌ Error checking schedule ${schedule.id}:`, error);
       }
     }
+  }
+
+  /**
+   * Log activity to database
+   */
+  private logActivity(
+    schedule: SmartSchedule,
+    action: 'evaluate' | 'trigger_on' | 'trigger_off' | 'skip',
+    temperature: number,
+    data: {
+      reason: string;
+      windChill?: number;
+      runtimeMinutes?: number;
+      startTime?: Date;
+      departureTime?: Date;
+      metadata?: string;
+    }
+  ): void {
+    const deviceName = this.deviceNameCache.get(schedule.deviceId) || schedule.deviceId;
+
+    this.activityLog.logActivity({
+      timestamp: new Date(),
+      scheduleId: schedule.id,
+      scheduleName: schedule.name,
+      deviceId: schedule.deviceId,
+      deviceName,
+      action,
+      temperature,
+      windChill: data.windChill,
+      runtimeMinutes: data.runtimeMinutes,
+      startTime: data.startTime,
+      departureTime: data.departureTime,
+      reason: data.reason,
+      metadata: data.metadata,
+    });
   }
 
   /**
@@ -440,5 +578,57 @@ export class SmartScheduler extends EventEmitter {
     }
 
     return calculations.sort((a, b) => a.startTime.getTime() - b.startTime.getTime());
+  }
+
+  /**
+   * Get forecast temperature at a specific time
+   */
+  private getForecastTemperature(forecast: import('../types.js').WeatherForecastPeriod[], targetTime: Date): number | null {
+    if (forecast.length === 0) return null;
+
+    // Find the forecast period closest to target time
+    let closestPeriod = forecast[0];
+    let minDiff = Math.abs(forecast[0].time.getTime() - targetTime.getTime());
+
+    for (const period of forecast) {
+      const diff = Math.abs(period.time.getTime() - targetTime.getTime());
+      if (diff < minDiff) {
+        minDiff = diff;
+        closestPeriod = period;
+      }
+    }
+
+    // If closest forecast is within 3 hours of target, use it
+    const hoursDiff = minDiff / (1000 * 60 * 60);
+    if (hoursDiff <= 3) {
+      // Account for windchill in forecast if available
+      if (closestPeriod.windChill !== undefined) {
+        return closestPeriod.windChill;
+      }
+      return closestPeriod.temperature;
+    }
+
+    return null;
+  }
+
+  /**
+   * Calculate wind chill temperature
+   * Based on US National Weather Service formula
+   * Only valid for temperatures <= 50°F and wind speeds >= 3 mph
+   */
+  private calculateWindChill(tempF: number, windSpeedMph: number): number {
+    // Wind chill only applies below 50°F and above 3 mph wind
+    if (tempF > 50 || windSpeedMph < 3) {
+      return tempF;
+    }
+
+    // NWS Wind Chill Formula
+    const windChill =
+      35.74 +
+      0.6215 * tempF -
+      35.75 * Math.pow(windSpeedMph, 0.16) +
+      0.4275 * tempF * Math.pow(windSpeedMph, 0.16);
+
+    return Math.round(windChill * 10) / 10;
   }
 }

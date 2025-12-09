@@ -4,9 +4,17 @@ import { createServer } from 'http';
 import { ConfigManager } from './config.js';
 import { WebSocketManager } from './websocket.js';
 import { DeviceDatabase } from './database/DeviceDatabase.js';
+import { SchedulerActivityLog } from './database/SchedulerActivityLog.js';
+import { CoordinationActivityLog } from './database/CoordinationActivityLog.js';
+import { CustomNamesManager } from './CustomNamesManager.js';
 import { GreeManager } from './devices/GreeManager.js';
 import { KasaManager } from './devices/KasaManager.js';
 import { GoodEarthManager } from './devices/GoodEarthManager.js';
+import { EcobeeManager } from './devices/EcobeeManager.js';
+import { HomeAssistantManager } from './devices/HomeAssistantManager.js';
+import { EcoFlowManager } from './devices/EcoFlowManager.js';
+import { JackeryManager } from './devices/JackeryManager.js';
+import { GenericIoTScanner } from './devices/GenericIoTScanner.js';
 import { AutomationEngine } from './automation/AutomationEngine.js';
 import { SmartScheduler } from './automation/SmartScheduler.js';
 import { WeatherService } from './services/WeatherService.js';
@@ -22,11 +30,19 @@ class IceNetControlServer {
   private wsManager = new WebSocketManager(this.server);
   private database = new DeviceDatabase();
   private smartScheduleDb = new SmartScheduleDatabase();
+  private schedulerActivityLog = new SchedulerActivityLog();
+  private coordinationActivityLog = new CoordinationActivityLog();
+  private customNamesManager = new CustomNamesManager();
 
   // Device managers
   private greeManager?: GreeManager;
   private kasaManager?: KasaManager;
   private goodEarthManager?: GoodEarthManager;
+  private ecobeeManager?: EcobeeManager;
+  private homeAssistantManager?: HomeAssistantManager;
+  private ecoflowManager?: any; // EcoFlowManager
+  private jackeryManager?: any; // JackeryManager
+  private genericIoTScanner?: any; // GenericIoTScanner
 
   // Services
   private weatherService?: WeatherService;
@@ -83,6 +99,32 @@ class IceNetControlServer {
         const { command, parameters } = req.body;
         await this.controlDevice(deviceId, command, parameters);
         res.json({ success: true });
+      } catch (error: any) {
+        res.status(500).json({ error: error.message });
+      }
+    });
+
+    this.app.put('/api/devices/:deviceId/name', (req, res) => {
+      try {
+        const { deviceId } = req.params;
+        const { customName } = req.body;
+
+        // Update custom name
+        this.customNamesManager.setCustomName(deviceId, customName);
+
+        // Get updated device and broadcast to all clients
+        const devices = this.getAllDevices();
+        const updatedDevice = devices.find(d => d.id === deviceId);
+
+        if (updatedDevice) {
+          this.wsManager.broadcast({
+            type: 'device_update',
+            payload: updatedDevice,
+            timestamp: new Date(),
+          });
+        }
+
+        res.json({ success: true, device: updatedDevice });
       } catch (error: any) {
         res.status(500).json({ error: error.message });
       }
@@ -270,10 +312,104 @@ class IceNetControlServer {
         res.status(500).json({ error: error.message });
       }
     });
+
+    // Scheduler activity log endpoints
+    this.app.get('/api/scheduler-activity', (req, res) => {
+      try {
+        const limit = parseInt(req.query.limit as string) || 100;
+        const offset = parseInt(req.query.offset as string) || 0;
+        const activity = this.schedulerActivityLog.getRecentActivity(limit, offset);
+        res.json(activity);
+      } catch (error: any) {
+        res.status(500).json({ error: error.message });
+      }
+    });
+
+    this.app.get('/api/scheduler-activity/:scheduleId', (req, res) => {
+      try {
+        const { scheduleId } = req.params;
+        const limit = parseInt(req.query.limit as string) || 50;
+        const activity = this.schedulerActivityLog.getActivityForSchedule(scheduleId, limit);
+        res.json(activity);
+      } catch (error: any) {
+        res.status(500).json({ error: error.message });
+      }
+    });
+
+    this.app.get('/api/scheduler-activity/:scheduleId/stats', (req, res) => {
+      try {
+        const { scheduleId } = req.params;
+        const stats = this.schedulerActivityLog.getScheduleStats(scheduleId);
+        res.json(stats);
+      } catch (error: any) {
+        res.status(500).json({ error: error.message });
+      }
+    });
+
+    this.app.get('/api/scheduler-activity/:scheduleId/last-action', (req, res) => {
+      try {
+        const { scheduleId } = req.params;
+        const lastAction = this.schedulerActivityLog.getLastAction(scheduleId);
+        res.json(lastAction);
+      } catch (error: any) {
+        res.status(500).json({ error: error.message });
+      }
+    });
+
+    // Coordination activity log endpoints
+    this.app.get('/api/coordination-activity', (req, res) => {
+      try {
+        const limit = parseInt(req.query.limit as string) || 100;
+        const offset = parseInt(req.query.offset as string) || 0;
+        const activity = this.coordinationActivityLog.getRecentActivity(limit, offset);
+        res.json(activity);
+      } catch (error: any) {
+        res.status(500).json({ error: error.message });
+      }
+    });
+
+    this.app.get('/api/coordination-activity/:coordinationId', (req, res) => {
+      try {
+        const { coordinationId } = req.params;
+        const limit = parseInt(req.query.limit as string) || 50;
+        const activity = this.coordinationActivityLog.getActivityForCoordination(coordinationId, limit);
+        res.json(activity);
+      } catch (error: any) {
+        res.status(500).json({ error: error.message });
+      }
+    });
+
+    this.app.get('/api/coordination-activity/:coordinationId/stats', (req, res) => {
+      try {
+        const { coordinationId } = req.params;
+        const stats = this.coordinationActivityLog.getCoordinationStats(coordinationId);
+        res.json(stats);
+      } catch (error: any) {
+        res.status(500).json({ error: error.message });
+      }
+    });
+
+    this.app.get('/api/coordination-activity/action/:action', (req, res) => {
+      try {
+        const { action } = req.params;
+        const limit = parseInt(req.query.limit as string) || 50;
+        const activity = this.coordinationActivityLog.getActivityByAction(action, limit);
+        res.json(activity);
+      } catch (error: any) {
+        res.status(500).json({ error: error.message });
+      }
+    });
   }
 
   private setupScenarios(): void {
-    this.scenarioManager = new ScenarioManager();
+    this.scenarioManager = new ScenarioManager(this.coordinationActivityLog);
+
+    // Populate device name cache for coordination logging
+    const devices = this.getAllDevices();
+    devices.forEach((device) => {
+      const customName = this.customNamesManager.getCustomName(device.id);
+      this.scenarioManager!.setDeviceName(device.id, customName || device.name);
+    });
 
     // Handle scenario device commands
     this.scenarioManager.on('device_command', async (command) => {
@@ -348,16 +484,121 @@ class IceNetControlServer {
         this.goodEarthManager?.startDiscovery(config.devices.goodearth.scanInterval);
       });
     }
+
+    // Ecobee Thermostats
+    if (config.devices.ecobee.enabled) {
+      this.ecobeeManager = new EcobeeManager(config.devices.ecobee.apiKey);
+      this.ecobeeManager.setDatabase(this.database);
+      this.ecobeeManager.on('device_update', (device) => {
+        this.wsManager.broadcast({
+          type: 'device_update',
+          payload: device,
+          timestamp: new Date(),
+        });
+      });
+      this.ecobeeManager.initialize().then(() => {
+        if (this.ecobeeManager) {
+          this.ecobeeManager.startRefresh(config.devices.ecobee.refreshInterval);
+        }
+      });
+    }
+
+    // Home Assistant
+    if (config.devices.homeassistant.enabled) {
+      this.homeAssistantManager = new HomeAssistantManager({
+        url: config.devices.homeassistant.url || 'http://localhost:8123',
+        token: config.devices.homeassistant.token || '',
+        enabled: config.devices.homeassistant.enabled,
+      });
+      this.homeAssistantManager.setDatabase(this.database);
+      this.homeAssistantManager.on('device_update', (device) => {
+        this.wsManager.broadcast({
+          type: 'device_update',
+          payload: device,
+          timestamp: new Date(),
+        });
+      });
+      this.homeAssistantManager.initialize().then(() => {
+        if (this.homeAssistantManager) {
+          this.homeAssistantManager.startRefresh(config.devices.homeassistant.refreshInterval);
+        }
+      });
+    }
+
+    // EcoFlow
+    if (config.devices.ecoflow && config.devices.ecoflow.enabled) {
+      this.ecoflowManager = new EcoFlowManager({
+        enabled: config.devices.ecoflow.enabled,
+        accessKey: config.devices.ecoflow.accessKey,
+        secretKey: config.devices.ecoflow.secretKey,
+        scanInterval: config.devices.ecoflow.scanInterval,
+      });
+      this.ecoflowManager.setDatabase(this.database);
+      this.ecoflowManager.on('device_update', (device: any) => {
+        this.wsManager.broadcast({
+          type: 'device_update',
+          payload: device,
+          timestamp: new Date(),
+        });
+      });
+      this.ecoflowManager.initialize().then(() => {
+        if (this.ecoflowManager) {
+          this.ecoflowManager.startRefresh(config.devices.ecoflow.scanInterval);
+        }
+      });
+    }
+
+    // Jackery
+    if (config.devices.jackery && config.devices.jackery.enabled) {
+      this.jackeryManager = new JackeryManager({
+        enabled: config.devices.jackery.enabled,
+        scanInterval: config.devices.jackery.scanInterval,
+      });
+      this.jackeryManager.setDatabase(this.database);
+      this.jackeryManager.on('device_update', (device: any) => {
+        this.wsManager.broadcast({
+          type: 'device_update',
+          payload: device,
+          timestamp: new Date(),
+        });
+      });
+      this.jackeryManager.initialize().then(() => {
+        if (this.jackeryManager) {
+          this.jackeryManager.startScanning(config.devices.jackery.scanInterval);
+        }
+      });
+    }
+
+    // Generic IoT Scanner
+    if (config.devices.genericiot && config.devices.genericiot.enabled) {
+      this.genericIoTScanner = new GenericIoTScanner();
+      this.genericIoTScanner.setDatabase(this.database);
+      this.genericIoTScanner.on('device_update', (device: any) => {
+        this.wsManager.broadcast({
+          type: 'device_update',
+          payload: device,
+          timestamp: new Date(),
+        });
+      });
+      this.genericIoTScanner.initialize().then(() => {
+        if (this.genericIoTScanner) {
+          this.genericIoTScanner.startScanning(config.devices.genericiot.scanInterval);
+        }
+      });
+    }
   }
 
   private setupWeather(): void {
     const config = this.configManager.getConfig();
 
     if (config.weather.enabled) {
-      this.weatherService = new WeatherService(
-        config.weather.apiKey,
-        config.weather.location
-      );
+      this.weatherService = new WeatherService({
+        provider: config.weather.provider || 'openmeteo',
+        latitude: config.weather.latitude,
+        longitude: config.weather.longitude,
+        apiKey: config.weather.apiKey,
+        location: config.weather.location,
+      });
 
       this.weatherService.initialize().then(() => {
         this.weatherService?.startUpdates(config.weather.updateInterval);
@@ -408,8 +649,16 @@ class IceNetControlServer {
       // Periodically evaluate system coordinations
       setInterval(() => {
         if (this.automationEngine && this.scenarioManager) {
-          this.scenarioManager.evaluateCoordinations((condition) =>
-            this.automationEngine!.evaluateConditionExternal(condition)
+          // Get current weather data for coordination logging
+          const weather = this.weatherService?.getWeather();
+          const weatherData = weather ? {
+            temperature: weather.temperature,
+            windChill: weather.windChill
+          } : undefined;
+
+          this.scenarioManager.evaluateCoordinations(
+            (condition) => this.automationEngine!.evaluateConditionExternal(condition),
+            weatherData
           );
         }
       }, config.automation.checkInterval * 1000);
@@ -422,8 +671,15 @@ class IceNetControlServer {
       return;
     }
 
-    // Create smart scheduler
-    this.smartScheduler = new SmartScheduler(this.weatherService);
+    // Create smart scheduler with activity logging
+    this.smartScheduler = new SmartScheduler(this.weatherService, this.schedulerActivityLog);
+
+    // Populate device name cache
+    const devices = this.getAllDevices();
+    devices.forEach((device) => {
+      const customName = this.customNamesManager.getCustomName(device.id);
+      this.smartScheduler!.setDeviceName(device.id, customName || device.name);
+    });
 
     // Load saved vehicle profiles
     const profiles = this.smartScheduleDb.getAllVehicleProfiles();
@@ -493,8 +749,30 @@ class IceNetControlServer {
     if (this.goodEarthManager) {
       devices.push(...this.goodEarthManager.getDevices());
     }
+    if (this.ecobeeManager) {
+      devices.push(...this.ecobeeManager.getDevices());
+    }
+    if (this.homeAssistantManager) {
+      devices.push(...this.homeAssistantManager.getDevices());
+    }
+    if (this.ecoflowManager) {
+      devices.push(...this.ecoflowManager.getDevices());
+    }
+    if (this.jackeryManager) {
+      devices.push(...this.jackeryManager.getDevices());
+    }
+    if (this.genericIoTScanner) {
+      devices.push(...this.genericIoTScanner.getDevices());
+    }
 
-    return devices;
+    // Apply custom names to devices
+    return devices.map(device => {
+      const customName = this.customNamesManager.getCustomName(device.id);
+      if (customName) {
+        return { ...device, customName };
+      }
+      return device;
+    });
   }
 
   private async controlDevice(
@@ -518,6 +796,21 @@ class IceNetControlServer {
       case 'goodearth':
         await this.goodEarthManager?.controlDevice(deviceId, command, parameters);
         break;
+      case 'ecobee':
+        await this.ecobeeManager?.controlDevice(deviceId, command, parameters);
+        break;
+      case 'homeassistant':
+        await this.homeAssistantManager?.controlDevice(deviceId, command, parameters);
+        break;
+      case 'ecoflow':
+        await this.ecoflowManager?.controlDevice(deviceId, command, parameters);
+        break;
+      case 'jackery':
+        await this.jackeryManager?.controlDevice(deviceId, command, parameters);
+        break;
+      case 'unknown':
+        await this.genericIoTScanner?.controlDevice(deviceId, command, parameters);
+        break;
     }
   }
 
@@ -537,6 +830,8 @@ class IceNetControlServer {
 ║    - Gree HVAC: ${config.devices.gree.enabled ? '✓' : '✗'}                                       ║
 ║    - Kasa: ${config.devices.kasa.enabled ? '✓' : '✗'}                                            ║
 ║    - Good Earth Lighting: ${config.devices.goodearth.enabled ? '✓' : '✗'}                        ║
+║    - Ecobee Thermostats: ${config.devices.ecobee.enabled ? '✓' : '✗'}                           ║
+║    - Home Assistant: ${config.devices.homeassistant.enabled ? '✓' : '✗'}                        ║
 ║                                                               ║
 ║  Services:                                                    ║
 ║    - Weather: ${config.weather.enabled ? '✓' : '✗'}                                          ║
@@ -557,6 +852,8 @@ class IceNetControlServer {
     await this.greeManager?.cleanup();
     await this.kasaManager?.cleanup();
     await this.goodEarthManager?.cleanup();
+    await this.ecobeeManager?.cleanup();
+    await this.homeAssistantManager?.cleanup();
 
     // Flush databases to disk
     await this.database.flush();
