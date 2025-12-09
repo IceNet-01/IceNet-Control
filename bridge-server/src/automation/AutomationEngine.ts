@@ -221,16 +221,22 @@ export class AutomationEngine extends EventEmitter {
   private compareValues(actual: any, operator: string, expected: any): boolean {
     switch (operator) {
       case 'eq':
+      case '==':
         return actual === expected;
       case 'ne':
+      case '!=':
         return actual !== expected;
       case 'gt':
+      case '>':
         return actual > expected;
       case 'gte':
+      case '>=':
         return actual >= expected;
       case 'lt':
+      case '<':
         return actual < expected;
       case 'lte':
+      case '<=':
         return actual <= expected;
       default:
         return false;
