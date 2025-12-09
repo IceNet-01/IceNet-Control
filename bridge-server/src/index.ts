@@ -19,8 +19,9 @@ import { AutomationEngine } from './automation/AutomationEngine.js';
 import { SmartScheduler } from './automation/SmartScheduler.js';
 import { WeatherService } from './services/WeatherService.js';
 import { ScenarioManager } from './scenarios/ScenarioManager.js';
+import { TemperatureSyncManager } from './TemperatureSyncManager.js';
 import { SmartScheduleDatabase } from './database/SmartScheduleDatabase.js';
-import { Device, AutomationRule, Scenario, SystemCoordination, VehicleProfile, SmartSchedule } from './types.js';
+import { Device, AutomationRule, Scenario, SystemCoordination, VehicleProfile, SmartSchedule, TemperatureSyncGroup } from './types.js';
 
 
 class IceNetControlServer {

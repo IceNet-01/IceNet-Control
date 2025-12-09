@@ -14,6 +14,7 @@ export class ScenarioManager extends EventEmitter {
   private deviceNameCache: Map<string, string> = new Map();
   private lastTriggerTime: Map<string, number> = new Map(); // Track last trigger time for each coordination
   private lastEvaluationTime: Map<string, number> = new Map(); // Track last evaluation time for each coordination
+  private lastActiveThreshold: Map<string, number> = new Map(); // Track which threshold index was last active for each coordination
 
   constructor(activityLog: CoordinationActivityLog) {
     super();
@@ -206,7 +207,8 @@ export class ScenarioManager extends EventEmitter {
 
       console.log(`[Coordination] 🔍 Evaluating "${coordination.name}"`);
 
-      for (const threshold of coordination.thresholds) {
+      for (let thresholdIndex = 0; thresholdIndex < coordination.thresholds.length; thresholdIndex++) {
+        const threshold = coordination.thresholds[thresholdIndex];
         const conditionMet = evaluateCondition(threshold.condition);
 
         // Get condition details for logging
@@ -241,18 +243,16 @@ export class ScenarioManager extends EventEmitter {
         });
 
         if (conditionMet) {
-          // Check if we recently triggered this coordination (prevent spam)
-          const lastTrigger = this.lastTriggerTime.get(coordination.id) || 0;
-          const timeSinceLastTrigger = now - lastTrigger;
-          const MIN_TRIGGER_INTERVAL = 60000; // 1 minute
-
-          if (timeSinceLastTrigger < MIN_TRIGGER_INTERVAL) {
-            console.log(`[Coordination] ⏸️  "${coordination.name}" triggered recently, skipping (${Math.round(timeSinceLastTrigger / 1000)}s ago)`);
+          // Check if this threshold is already active (prevent re-triggering the same state)
+          const lastActiveThresholdIndex = this.lastActiveThreshold.get(coordination.id);
+          if (lastActiveThresholdIndex === thresholdIndex) {
+            console.log(`[Coordination] ⏭️  "${coordination.name}" - threshold already active, no action needed`);
             continue;
           }
 
           console.log(`[Coordination] ✅ TRIGGERING: "${coordination.name}" - ${reason}`);
           this.lastTriggerTime.set(coordination.id, now);
+          this.lastActiveThreshold.set(coordination.id, thresholdIndex);
 
           // Collect actions executed
           const actionsExecuted: string[] = [];

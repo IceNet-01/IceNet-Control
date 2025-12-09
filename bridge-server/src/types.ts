@@ -226,6 +226,15 @@ export interface SystemCoordination {
   }>;
 }
 
+// Temperature Sync Group types
+export interface TemperatureSyncGroup {
+  id: string;
+  name: string;
+  description?: string;
+  enabled: boolean;
+  deviceIds: string[]; // Devices that should maintain the same temperature
+}
+
 // Weather data types
 export interface WeatherForecastPeriod {
   time: Date;
