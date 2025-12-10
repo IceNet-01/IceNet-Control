@@ -3,7 +3,7 @@
     "id": "coord_1764726802921",
     "name": "Heat",
     "description": "",
-    "enabled": true,
+    "enabled": false,
     "evaluationInterval": 30,
     "thresholds": [
       {

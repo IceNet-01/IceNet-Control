@@ -1,0 +1,12 @@
+[
+  {
+    "id": "tempsync_1765307032697",
+    "name": "test",
+    "description": "",
+    "enabled": true,
+    "deviceIds": [
+      "gree_10_125_0_123",
+      "ha_climate_living_room"
+    ]
+  }
+]
